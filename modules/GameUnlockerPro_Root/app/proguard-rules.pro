@@ -1,0 +1,10 @@
+-keep class com.gameunlocker.pro.XposedLoader { *; }
+-keep class com.gameunlocker.pro.hooks.** { *; }
+-keep class com.gameunlocker.pro.utils.** { *; }
+-keep class com.gameunlocker.pro.model.** { *; }
+-keep class de.robv.android.xposed.** { *; }
+-keep class rikka.shizuku.** { *; }
+-dontwarn de.robv.android.xposed.**
+-dontwarn rikka.shizuku.**
+-keepclassmembers class com.gameunlocker.pro.model.** { *; }
+-keepattributes *Annotation*,Signature,EnclosingMethod

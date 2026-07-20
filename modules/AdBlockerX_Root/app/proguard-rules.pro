@@ -1,0 +1,10 @@
+-keep class com.adblockerx.pro.XposedLoader { *; }
+-keep class com.adblockerx.pro.hooks.** { *; }
+-keep class com.adblockerx.pro.utils.** { *; }
+-keep class com.adblockerx.pro.models.** { *; }
+-keep class de.robv.android.xposed.** { *; }
+-dontwarn de.robv.android.xposed.**
+-dontwarn rikka.shizuku.**
+-keep class rikka.shizuku.** { *; }
+-keepclassmembers class com.adblockerx.pro.models.** { *; }
+-keepattributes *Annotation*,Signature,EnclosingMethod

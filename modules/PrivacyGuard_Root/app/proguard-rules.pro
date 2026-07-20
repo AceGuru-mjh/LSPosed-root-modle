@@ -1,0 +1,10 @@
+-keep class com.privacyguard.pro.XposedLoader { *; }
+-keep class com.privacyguard.pro.hooks.** { *; }
+-keep class com.privacyguard.pro.utils.** { *; }
+-keep class com.privacyguard.pro.models.** { *; }
+-keep class de.robv.android.xposed.** { *; }
+-dontwarn de.robv.android.xposed.**
+-dontwarn rikka.shizuku.**
+-keep class rikka.shizuku.** { *; }
+-keepclassmembers class com.privacyguard.pro.models.** { *; }
+-keepattributes *Annotation*,Signature,EnclosingMethod
