@@ -1,6 +1,7 @@
 package com.gameunlocker.pro.hooks
 
 import com.gameunlocker.pro.models.GameConfig
+import com.gameunlocker.pro.utils.LogStore
 import com.gameunlocker.pro.utils.LogX
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodReplacement
@@ -26,6 +27,8 @@ object FrameRateUnlockHook {
         if (!cfg.frameRateUnlockEnabled) return
         fps = if (cfg.targetFps <= 0) detectMaxRefreshRate() else cfg.targetFps
         LogX.i("帧率解锁: ${fps}fps（应用层 + Shizuku 提示）")
+        try { LogStore.add("unlocked", "解锁帧率: ${fps}fps") } catch (_: Exception) { }
+        try { LogStore.incrementCounter(1) } catch (_: Exception) { }
 
         hookDisplay(lpparam)
         hookSurface(lpparam)

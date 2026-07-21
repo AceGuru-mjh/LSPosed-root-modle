@@ -1,6 +1,7 @@
 package com.adblockerx.pro.hooks
 
 import com.adblockerx.pro.models.AdBlockConfig
+import com.adblockerx.pro.utils.LogStore
 import com.adblockerx.pro.utils.LogX
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
@@ -43,6 +44,8 @@ object OkHttpAdHook {
                             val url = try { extractRequestUrl(p.thisObject) } catch (_: Throwable) { null }
                             if (url != null && HostsFilterHook.isUrlBlocked(url)) {
                                 LogX.i("[OkHttp] 拦截 execute: $url")
+                                try { LogStore.add("blocked", "拦截 OkHttp: $url") } catch (_: Exception) { }
+                                try { LogStore.incrementCounter(1) } catch (_: Exception) { }
                                 p.result = buildEmptyResponse(lpparam, url)
                             }
                         }
@@ -58,6 +61,8 @@ object OkHttpAdHook {
                             val url = try { extractRequestUrl(p.thisObject) } catch (_: Throwable) { null }
                             if (url != null && HostsFilterHook.isUrlBlocked(url)) {
                                 LogX.i("[OkHttp] 拦截 enqueue: $url")
+                                try { LogStore.add("blocked", "拦截 OkHttp: $url") } catch (_: Exception) { }
+                                try { LogStore.incrementCounter(1) } catch (_: Exception) { }
                                 p.result = null
                             }
                         }
@@ -81,6 +86,8 @@ object OkHttpAdHook {
                         val url = try { extractUrlFromRequest(req) } catch (_: Throwable) { null }
                         if (url != null && HostsFilterHook.isUrlBlocked(url)) {
                             LogX.i("[OkHttp] 拦截 Chain.proceed: $url")
+                            try { LogStore.add("blocked", "拦截 OkHttp: $url") } catch (_: Exception) { }
+                            try { LogStore.incrementCounter(1) } catch (_: Exception) { }
                             p.result = buildEmptyResponse(lpparam, url)
                         }
                     }

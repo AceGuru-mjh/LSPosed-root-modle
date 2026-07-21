@@ -1,6 +1,7 @@
 package com.gameunlocker.pro.hooks
 
 import com.gameunlocker.pro.models.GameConfig
+import com.gameunlocker.pro.utils.LogStore
 import com.gameunlocker.pro.utils.LogX
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodReplacement
@@ -29,6 +30,8 @@ object ThermalBypassHook {
         if (!cfg.thermalBypassEnabled) return
         thermalThreshold = cfg.customThermalThreshold
         LogX.i("温控屏蔽启动: 阈值=${thermalThreshold}°C（系统级 Hook）")
+        try { LogStore.add("unlocked", "温控屏蔽已启用") } catch (_: Exception) { }
+        try { LogStore.incrementCounter(1) } catch (_: Exception) { }
 
         hookThermalService(lpparam)
         hookCPUFreqGovernor(lpparam)

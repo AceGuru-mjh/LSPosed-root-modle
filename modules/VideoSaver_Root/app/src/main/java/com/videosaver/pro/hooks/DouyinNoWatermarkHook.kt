@@ -1,6 +1,7 @@
 package com.videosaver.pro.hooks
 
 import com.videosaver.pro.models.VideoConfig
+import com.videosaver.pro.utils.LogStore
 import com.videosaver.pro.utils.LogX
 import com.videosaver.pro.utils.VideoFileSaver
 import de.robv.android.xposed.XC_MethodHook
@@ -38,6 +39,8 @@ object DouyinNoWatermarkHook {
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: VideoConfig) {
         if (!cfg.douyinNoWatermark) return
         LogX.i("抖音无水印下载 Hook 启动（Root 版）")
+        try { LogStore.add("saved", "无水印下载已启用") } catch (_: Exception) { }
+        try { LogStore.incrementCounter(1) } catch (_: Exception) { }
 
         hookAwemeUrlGetters(lpparam, cfg)
         hookVideoDownloadEntry(lpparam, cfg)
