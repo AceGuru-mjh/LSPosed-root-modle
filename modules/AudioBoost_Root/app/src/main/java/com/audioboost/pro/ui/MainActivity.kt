@@ -37,6 +37,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.audioboost.pro.models.AudioConfig
 import com.audioboost.pro.ui.screens.FeaturesScreen
+import com.audioboost.pro.ui.screens.HomeScreen
 import com.audioboost.pro.ui.theme.AudioBoostTheme
 import com.audioboost.pro.utils.ConfigManager
 
@@ -64,6 +65,7 @@ fun MainScreen() {
         val onCfgChange: (AudioConfig) -> Unit = { cfg = it }
 
         val screens = listOf(
+            Triple("home", "总开关", Icons.Default.PowerSettingsNew),
             Triple("features", "功能", Icons.Default.Build),
             Triple("about", "关于", Icons.Default.Info)
         )
@@ -130,9 +132,10 @@ private fun AppNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "features",
+        startDestination = "home",
         modifier = Modifier.fillMaxSize().padding(padding)
     ) {
+        composable("home") { HomeScreen(cfg, onCfgChange) }
         composable("features") { FeaturesScreen(cfg, onCfgChange) }
     }
 }
