@@ -51,7 +51,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         val pkg = lpparam.packageName ?: return
         if (!isTargetApp(pkg)) return
 
-        LogX.i("===== APP启动: $pkg =====")
+        LogX.i("=== NotifyMaster v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (EnvDetector.isLocalMode) "local" else "integrated"} ===")
         currentPkg = pkg
 
         LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
@@ -61,6 +61,9 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         }
 
         initConfig(lpparam)
+        if (!EnvDetector.isLocalMode) {
+            try { Thread.sleep(100) } catch (_: Throwable) { }
+        }
 
         val cfg = loadConfig()
         cfg.packageName = pkg

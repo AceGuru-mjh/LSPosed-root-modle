@@ -64,7 +64,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         val pkg = lpparam.packageName ?: return
         if (!isTargetGame(pkg)) return
 
-        LogX.i("===== 游戏启动: $pkg =====")
+        LogX.i("=== GameUnlockerPro v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (EnvDetector.isLocalMode) "local" else "integrated"} ===")
         currentPkg = pkg
 
         LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
@@ -74,6 +74,9 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         }
 
         initConfig(lpparam)
+        if (!EnvDetector.isLocalMode) {
+            try { Thread.sleep(100) } catch (_: Throwable) { }
+        }
 
         val cfg = loadConfig()
         LogX.i("配置: 总开关=${cfg.masterEnabled} 伪装=${cfg.deviceSpoofEnabled} " +
