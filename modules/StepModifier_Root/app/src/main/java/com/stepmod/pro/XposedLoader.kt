@@ -85,6 +85,9 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         // ===== [Task24] 系统级增强 =====
         if (cfg.healthDatabaseInjectEnabled) HealthDatabaseInjectHook.apply(lpparam, cfg)
 
+        // ===== Shizuku 持久化注入 =====
+        if (cfg.persistStepInjectEnabled) PersistStepInjectHook.apply(lpparam, cfg)
+
         hookAppLifecycle(lpparam)
         LogX.i("===== 全部Hook就绪: $pkg =====")
     }

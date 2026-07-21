@@ -80,5 +80,9 @@ data class NotifyConfig(
 
     var globalNotifyQueueEnabled: Boolean = false,  // v1.0.11 Root增强: 全局通知队列管理(跨APP排序)
 
+    // ===== Root v1.1.0：系统级 Root 增强 =====
+    var globalQueueRootEnabled: Boolean = false,          // 启用全局队列 Root 命令（cmd notification list/cancel/dumpsys）
+    var sysfsLedEnabled: Boolean = false,                 // 启用 sysfs LED 节点写入（通知灯控制）
+
     var lastModified: Long = 0L
 )

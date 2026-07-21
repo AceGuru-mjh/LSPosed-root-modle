@@ -39,6 +39,8 @@ data class AudioConfig(
     // ===== 系统级增强（Task24 新增）=====
     /** AudioPolicy 配置 Hack（Shizuku 写 Magisk overlay 持久化 audio_policy_configuration.xml） */
     var audioPolicyHackEnabled: Boolean = false,
+    /** tinymix 音频混音器探测（Shizuku 执行 tinymix 获取/设置混音器控件） */
+    var tinymixProbeEnabled: Boolean = false,
 
     // ===== 参数 =====
     var boostLevel: Int = 150,

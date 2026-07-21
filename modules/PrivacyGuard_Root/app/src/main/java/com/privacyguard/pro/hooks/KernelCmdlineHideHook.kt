@@ -4,6 +4,7 @@ import com.privacyguard.pro.models.PrivacyConfig
 import com.privacyguard.pro.utils.FakeDeviceCache
 import com.privacyguard.pro.utils.InstanceTagger
 import com.privacyguard.pro.utils.LogX
+import com.privacyguard.pro.utils.ShizukuHelper
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
@@ -38,6 +39,29 @@ object KernelCmdlineHideHook {
 
         hookFileInputStreamForCmdline(lpparam)
         hookRandomAccessFileForCmdline(lpparam)
+        applyShizukuMount(lpparam, cfg)
+    }
+
+    fun applyShizukuMount(lpparam: XC_LoadPackage.LoadPackageParam, cfg: PrivacyConfig) {
+        if (!cfg.kernelCmdlineMountEnabled) return
+        if (!ShizukuHelper.isShizukuAvailable()) {
+            LogX.w("Shizuku不可用，跳过内核cmdline挂载")
+            return
+        }
+        XposedHelpers.findAndHookMethod("android.app.Application", lpparam.classLoader, "onCreate",
+            object : XC_MethodHook() {
+                override fun afterHookedMethod(p: MethodHookParam) {
+                    try {
+                        ShizukuHelper.execShellSilent("cp /proc/cmdline /data/local/tmp/cmdline.bak")
+                        ShizukuHelper.execShellSilent("sed 's/androidboot.verifiedbootstate=orange/androidboot.verifiedbootstate=green/g' /proc/cmdline > /data/local/tmp/fake_cmdline")
+                        ShizukuHelper.execShellSilent("mount --bind /data/local/tmp/fake_cmdline /proc/cmdline")
+                        LogX.i("Shizuku内核cmdline挂载完成")
+                    } catch (e: Throwable) {
+                        LogX.w("Shizuku内核cmdline挂载异常: ${e.message}")
+                    }
+                }
+            })
+        LogX.hookSuccess("Application", "onCreate->ShizukuKernelCmdlineMount")
     }
 
     /**

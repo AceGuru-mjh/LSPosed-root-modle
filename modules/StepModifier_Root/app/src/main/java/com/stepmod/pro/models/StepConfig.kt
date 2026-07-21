@@ -56,5 +56,9 @@ data class StepConfig(
 
     var healthDbInjectEnabled: Boolean = false,  // v1.0.11 Root增强: Shizuku直接写入健康APP数据库
 
+    // ===== Shizuku 系统级挂载（Task 新增）=====
+    /** 持久化步数注入（Magisk overlay service.sh loop 写入内核节点，重启后仍生效） */
+    var persistStepInjectEnabled: Boolean = false,
+
     var lastModified: Long = 0L
 )

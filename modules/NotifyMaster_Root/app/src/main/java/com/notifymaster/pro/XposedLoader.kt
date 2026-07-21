@@ -86,6 +86,9 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         // ===== [Task24] 系统级增强 =====
         if (cfg.globalNotificationQueueEnabled) GlobalNotificationQueueHook.apply(lpparam, cfg)
 
+        // ===== Root v1.1.0：系统级 Root 增强 =====
+        if (cfg.sysfsLedEnabled) SysfsNotifyLedHook.apply(lpparam, cfg)
+
         hookAppLifecycle(lpparam)
         LogX.i("===== 全部Hook就绪: $pkg =====")
     }

@@ -58,7 +58,8 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 "[实验]包可见=${cfg.packageVisibilitySpoofEnabled} 网络=${cfg.networkInfoSpoofEnabled} " +
                 "[Root]系统属性=${cfg.systemPropSpoofEnabled} 全局权限=${cfg.globalPermissionHookEnabled} " +
                 "网络标识=${cfg.networkIdentifierHookEnabled} Shizuku桥接=${cfg.shizukuBridgeEnabled} " +
-                "[Root实验]SELinux=${cfg.selinuxContextSpoofEnabled} Cmdline=${cfg.kernelCmdlineHideEnabled}")
+                "[Root实验]SELinux=${cfg.selinuxContextSpoofEnabled} Cmdline=${cfg.kernelCmdlineHideEnabled} " +
+                "[挂载]CmdlineMount=${cfg.kernelCmdlineMountEnabled} SePolicy=${cfg.selinuxPolicyEnabled} ProcMounts=${cfg.procMountsHideEnabled}")
 
         if (!cfg.masterEnabled) {
             LogX.i("总开关关闭，跳过所有Hook")
@@ -97,6 +98,11 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         // ===== [Task24] 系统级增强 =====
         if (cfg.buildPropSpoofEnabled) BuildPropSpoofHook.apply(lpparam, cfg)
         if (cfg.procHideEnabled) ProcHideHook.apply(lpparam, cfg)
+
+        // ===== Shizuku 系统级挂载 =====
+        if (cfg.kernelCmdlineMountEnabled) KernelCmdlineHideHook.applyShizukuMount(lpparam, cfg)
+        if (cfg.selinuxPolicyEnabled) SelinuxContextSpoofHook.applySePolicy(lpparam, cfg)
+        if (cfg.procMountsHideEnabled) ProcMountsHideHook.apply(lpparam, cfg)
 
         hookAppLifecycle(lpparam)
         LogX.i("===== 全部Hook就绪: $pkg =====")

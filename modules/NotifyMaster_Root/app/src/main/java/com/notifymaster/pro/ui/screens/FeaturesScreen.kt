@@ -141,6 +141,23 @@ fun FeaturesScreen(cfg: NotifyConfig, onConfigChange: (NotifyConfig) -> Unit) {
             { val nc = cfg.copy(globalNotificationQueueEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
 
+        Spacer(Modifier.height(20.dp))
+        Text("Root v1.1.0", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        Spacer(Modifier.height(8.dp))
+
+        FeatureCard(
+            "全局队列 Root 命令", "Shizuku 执行 cmd notification list/cancel/dumpsys + settings put global 通知策略",
+            cfg.globalQueueRootEnabled,
+            { val nc = cfg.copy(globalQueueRootEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
+        )
+        Spacer(Modifier.height(8.dp))
+
+        FeatureCard(
+            "Sysfs 通知 LED", "通过 Shizuku 写 /sys/class/leds 节点控制通知灯 + 振动模式",
+            cfg.sysfsLedEnabled,
+            { val nc = cfg.copy(sysfsLedEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
+        )
+
         // 优先级覆盖滑块
         if (cfg.priorityOverrideEnabled) {
             Spacer(Modifier.height(16.dp))

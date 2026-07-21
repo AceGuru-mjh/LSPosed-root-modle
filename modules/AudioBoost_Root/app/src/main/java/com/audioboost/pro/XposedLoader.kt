@@ -88,6 +88,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
         // ===== [Task24] 系统级增强 =====
         if (cfg.audioPolicyHackEnabled) AudioPolicyHackHook.apply(lpparam, cfg)
+        if (cfg.tinymixProbeEnabled) TinymixAudioHook.apply(lpparam, cfg)
 
         hookAppLifecycle(lpparam)
         LogX.i("===== 全部Hook就绪: $pkg =====")

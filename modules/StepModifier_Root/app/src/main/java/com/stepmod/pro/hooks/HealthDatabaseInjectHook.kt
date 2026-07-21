@@ -38,15 +38,34 @@ object HealthDatabaseInjectHook {
     }
 
     private fun execute() {
-        // 直接写入健康 APP 数据库
         val healthApps = mapOf(
             "com.xiaomi.hm.health" to "/data/data/com.xiaomi.hm.health/databases/health.db",
-            "com.huawei.health" to "/data/data/com.huawei.health/databases/health.db"
+            "com.huawei.health" to "/data/data/com.huawei.health/databases/health.db",
+            "com.sec.android.app.shealth" to "/data/data/com.sec.android.app.shealth/databases/shealth.db",
+            "com.oppo.health" to "/data/data/com.oppo.health/databases/health.db",
+            "com.vivo.health" to "/data/data/com.vivo.health/databases/health.db",
+            "com.google.android.apps.fitness" to "/data/data/com.google.android.apps.fitness/databases/fitness.db"
         )
+
+        val sqlsPerDb = mapOf(
+            "com.xiaomi.hm.health" to "UPDATE step_table SET steps=10000 WHERE date=strftime('%Y-%m-%d','now')",
+            "com.huawei.health" to "UPDATE step_table SET steps=10000 WHERE date=strftime('%Y-%m-%d','now')",
+            "com.sec.android.app.shealth" to "UPDATE daily_steps SET step_count=10000 WHERE date=date('now')",
+            "com.oppo.health" to "UPDATE step_records SET steps=10000 WHERE date=date('now')",
+            "com.vivo.health" to "UPDATE step_records SET steps=10000 WHERE date=date('now')",
+            "com.google.android.apps.fitness" to "UPDATE entry SET value=10000 WHERE name='step_count' AND date=date('now')"
+        )
+
         for ((pkg, db) in healthApps) {
-            val result = ShizukuHelper.execSqlite(db, "UPDATE step_table SET steps=10000 WHERE date=strftime('%Y-%m-%d','now')")
+            val sql = sqlsPerDb[pkg] ?: "UPDATE step_table SET steps=10000 WHERE date=strftime('%Y-%m-%d','now')"
+            val tables = ShizukuHelper.execShell("sqlite3 '$db' '.tables'")
+            LogX.d("$pkg 数据库表: $tables")
+            val result = ShizukuHelper.execSqlite(db, sql)
             if (result != null) {
                 LogX.d("已写入 $pkg 步数数据库")
+            } else {
+                val fallback = ShizukuHelper.execSqlite(db, sqlsPerDb.values.first())
+                if (fallback != null) LogX.d("$pkg 使用通用SQL写入成功")
             }
         }
     }

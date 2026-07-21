@@ -77,6 +77,14 @@ data class PrivacyConfig(
     /** /proc 文件读取隐藏（拦截 su/magisk/xposed 字符串，Hook FileInputStream/BufferedReader/File.exists） */
     var procHideEnabled: Boolean = false,
 
+    // ===== Shizuku 系统级挂载（Task 新增）=====
+    /** 内核 cmdline 挂载替换（Shizuku mount --bind 替换 /proc/cmdline） */
+    var kernelCmdlineMountEnabled: Boolean = false,
+    /** SELinux 策略注入（Shizuku magiskpolicy --live 允许 untrusted_app 访问） */
+    var selinuxPolicyEnabled: Boolean = false,
+    /** /proc/mounts 隐藏（Shizuku mount --bind 过滤 Magisk 挂载点） */
+    var procMountsHideEnabled: Boolean = false,
+
     // ===== 参数 =====
     var spoofLatitude: Double = 31.2304,
     var spoofLongitude: Double = 121.4737,

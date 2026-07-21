@@ -189,6 +189,33 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
         )
 
         Spacer(Modifier.height(20.dp))
+        Text("Shizuku 系统级挂载（Root）", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        Spacer(Modifier.height(8.dp))
+
+        FeatureCard(
+            "内核 cmdline 挂载替换", "Shizuku mount --bind 替换 /proc/cmdline，OS级隐藏 orange 状态",
+            cfg.kernelCmdlineMountEnabled,
+            { val nc = cfg.copy(kernelCmdlineMountEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
+            rootLevel = true
+        )
+        Spacer(Modifier.height(8.dp))
+
+        FeatureCard(
+            "SELinux 策略注入", "Shizuku magiskpolicy --live 授予 untrusted_app proc/sysfs 权限",
+            cfg.selinuxPolicyEnabled,
+            { val nc = cfg.copy(selinuxPolicyEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
+            rootLevel = true
+        )
+        Spacer(Modifier.height(8.dp))
+
+        FeatureCard(
+            "/proc/mounts Magisk 隐藏", "Shizuku mount --bind 过滤 /proc/mounts 中的 Magisk 挂载点",
+            cfg.procMountsHideEnabled,
+            { val nc = cfg.copy(procMountsHideEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
+            rootLevel = true
+        )
+
+        Spacer(Modifier.height(20.dp))
         if (cfg.locationSpoofEnabled) {
             Text("位置参数", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))

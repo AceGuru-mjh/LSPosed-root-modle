@@ -41,6 +41,28 @@ object SelinuxContextSpoofHook {
         hookSelinuxClass(lpparam)
         hookFileReadForAttr(lpparam)
         observeSelinuxStatus()
+        applySePolicy(lpparam, cfg)
+    }
+
+    fun applySePolicy(lpparam: XC_LoadPackage.LoadPackageParam, cfg: PrivacyConfig) {
+        if (!cfg.selinuxPolicyEnabled) return
+        if (!ShizukuHelper.isShizukuAvailable()) {
+            LogX.w("Shizuku不可用，跳过SELinux策略注入")
+            return
+        }
+        XposedHelpers.findAndHookMethod("android.app.Application", lpparam.classLoader, "onCreate",
+            object : XC_MethodHook() {
+                override fun afterHookedMethod(p: MethodHookParam) {
+                    try {
+                        ShizukuHelper.execShellSilent("magiskpolicy --live 'allow untrusted_app sysfs file { read write open }'")
+                        ShizukuHelper.execShellSilent("magiskpolicy --live 'allow untrusted_app proc file { read open }'")
+                        LogX.i("Shizuku SELinux策略注入完成")
+                    } catch (e: Throwable) {
+                        LogX.w("Shizuku SELinux策略注入异常: ${e.message}")
+                    }
+                }
+            })
+        LogX.hookSuccess("Application", "onCreate->ShizukuSePolicy")
     }
 
     /**

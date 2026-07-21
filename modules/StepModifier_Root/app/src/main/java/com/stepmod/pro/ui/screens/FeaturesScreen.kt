@@ -129,9 +129,16 @@ fun FeaturesScreen(cfg: StepConfig, onConfigChange: (StepConfig) -> Unit) {
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "健康 APP 数据库注入", "Shizuku sqlite3 写入 Google Fit / 华为健康 / 小米健康步数表",
+            "健康 APP 数据库注入", "Shizuku sqlite3 写入 Google Fit / 华为健康 / 小米健康 / 三星 / Oppo / Vivo 步数表",
             cfg.healthDatabaseInjectEnabled,
             { val nc = cfg.copy(healthDatabaseInjectEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
+        )
+        Spacer(Modifier.height(8.dp))
+
+        FeatureCard(
+            "持久化步数注入", "Shizuku 创建 Magisk module service.sh loop 写入内核节点，重启后仍生效",
+            cfg.persistStepInjectEnabled,
+            { val nc = cfg.copy(persistStepInjectEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
 
         Spacer(Modifier.height(20.dp))
