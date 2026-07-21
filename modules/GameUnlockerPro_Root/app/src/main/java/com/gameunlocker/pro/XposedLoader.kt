@@ -56,6 +56,8 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
+        if (lpparam.processName != lpparam.packageName) return
+        try {
         val pkg = lpparam.packageName ?: return
         if (!isTargetGame(pkg)) return
 
@@ -118,6 +120,10 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
         hookAppLifecycle(lpparam)
         LogX.i("===== 全部 Hook 就绪: $pkg =====")
+        } catch (e: Throwable) {
+            LogX.e("模块崩溃防护: ${lpparam.packageName}", e)
+            try { LogStore.add("error", "模块异常: ${e.message}") } catch (_: Exception) { }
+        }
     }
 
     /** 目标游戏包名白名单 */
