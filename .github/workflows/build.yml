@@ -68,9 +68,9 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.11
-          name: LSP-Model-Root 模块合集 v1.0.11
+          name: LSPosed-root-modle 模块合集 v1.0.11
           body: |
-            # LSP-Model-Root v1.0.11
+            # LSPosed-root-modle v1.0.11
             10 个 LSPosed Root 模块 APK
             开发者：MJH
           files: release-assets/*.apk
