@@ -64,9 +64,9 @@ fun DiagnosticsScreen() {
         DiagCard(
             icon = if (xposedActive) Icons.Default.CheckCircle else Icons.Default.Warning,
             title = "Xposed 框架",
-            status = if (xposedActive) "已激活" else "未激活（模块进程内）",
-            detail = if (xposedActive) "XposedBridge 已加载，Hook 可正常工作"
-                     else "当前在模块自身进程，XposedBridge 不可见属正常。实际 Hook 生效需在目标 APP 内验证",
+            status = if (xposedActive) "已激�? else "未激活（模块进程内）",
+            detail = if (xposedActive) "XposedBridge 已加载，Hook 可正常工�?
+                     else "当前在模块自身进程，XposedBridge 不可见属正常。实�?Hook 生效需在目�?APP 内验�?,
             ok = xposedActive
         )
         Spacer(Modifier.height(8.dp))
@@ -74,8 +74,8 @@ fun DiagnosticsScreen() {
         DiagCard(
             icon = if (shizukuActive) Icons.Default.CheckCircle else Icons.Default.Warning,
             title = "Shizuku 服务",
-            status = if (shizukuActive) "已连接" else "未连接",
-            detail = if (shizukuActive) "Shizuku 服务运行中，系统级 Hook 可用"
+            status = if (shizukuActive) "已连�? else "未连�?,
+            detail = if (shizukuActive) "Shizuku 服务运行中，系统�?Hook 可用"
                      else "Shizuku 未运行或未授权。Root 版系统级功能不可用，仅应用层 Hook 工作",
             ok = shizukuActive
         )
@@ -93,10 +93,10 @@ fun DiagnosticsScreen() {
         val cfg = remember { try { ConfigManager.getGlobalConfig() } catch (_: Throwable) { null } }
         DiagCard(
             icon = Icons.Default.BugReport,
-            title = "配置状态",
-            status = if (cfg != null) "已加载" else "未初始化",
-            detail = if (cfg != null) "总开关: ${if (cfg.masterEnabled) "开" else "关"}\n目标步数: ${cfg.customSteps}\n" +
-                    "系统传感器: ${cfg.systemSensorEnabled} 健康服务: ${cfg.healthServiceEnabled}\n" +
+            title = "配置状�?,
+            status = if (cfg != null) "已加�? else "未初始化",
+            detail = if (cfg != null) "总开�? ${if (cfg.masterEnabled) "开" else "�?}\n目标步数: ${cfg.customSteps}\n" +
+                    "系统传感�? ${cfg.systemSensorEnabled} 健康服务: ${cfg.healthServiceEnabled}\n" +
                     "配置文件: /data/data/${ctx.packageName}/shared_prefs/${ConfigManager.PREFS_NAME}.xml"
                      else "ConfigManager 未初始化",
             ok = cfg != null
@@ -108,10 +108,10 @@ fun DiagnosticsScreen() {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("诊断说明", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text("• 本页显示模块自身进程的状态，非目标 APP 进程", style = MaterialTheme.typography.bodySmall)
-                Text("• Root 版系统级 Hook 依赖 Shizuku（adb 级或 root 级）", style = MaterialTheme.typography.bodySmall)
-                Text("• 写 /sys /proc 内核节点需 root 级别 Shizuku 授权", style = MaterialTheme.typography.bodySmall)
-                Text("• 实际 Hook 是否生效需在目标 APP 内通过 LSPosed 日志验证", style = MaterialTheme.typography.bodySmall)
+                Text("�?本页显示模块自身进程的状态，非目�?APP 进程", style = MaterialTheme.typography.bodySmall)
+                Text("�?Root 版系统级 Hook 依赖 Shizuku（adb 级或 root 级）", style = MaterialTheme.typography.bodySmall)
+                Text("�?�?/sys /proc 内核节点需 root 级别 Shizuku 授权", style = MaterialTheme.typography.bodySmall)
+                Text("�?实际 Hook 是否生效需在目�?APP 内通过 LSPosed 日志验证", style = MaterialTheme.typography.bodySmall)
             }
         }
         Spacer(Modifier.height(32.dp))

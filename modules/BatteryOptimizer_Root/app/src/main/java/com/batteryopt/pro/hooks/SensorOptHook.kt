@@ -7,14 +7,14 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * SensorManager 传感器降频 Hook（应用层）
+ * SensorManager 传感器降�?Hook（应用层�?
  */
 object SensorOptHook {
 
     private const val HIGH_FREQ_THRESHOLD_US = 20_000
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: BatteryConfig) {
-        LogX.i("Sensor 传感器优化启动 | 上限=${cfg.sensorMaxRateUs}us")
+        LogX.i("Sensor 传感器优化启�?| 上限=${cfg.sensorMaxRateUs}us")
 
         hookRegisterListener(lpparam, cfg)
     }
@@ -38,13 +38,13 @@ object SensorOptHook {
                         if (period < HIGH_FREQ_THRESHOLD_US) {
                             val old = period
                             p.args[2] = cfg.sensorMaxRateUs
-                            LogX.w("传感器降频: ${old}us -> ${cfg.sensorMaxRateUs}us")
+                            LogX.w("传感器降�? ${old}us -> ${cfg.sensorMaxRateUs}us")
                         }
                     }
                 })
-            LogX.hookSuccess("SensorManager", "registerListener(3参)")
+            LogX.hookSuccess("SensorManager", "registerListener(3�?")
         } catch (e: Exception) {
-            LogX.e("Hook registerListener(3参) 异常", e)
+            LogX.e("Hook registerListener(3�? 异常", e)
         }
 
         try {
@@ -60,11 +60,11 @@ object SensorOptHook {
                         if (period < HIGH_FREQ_THRESHOLD_US) {
                             val old = period
                             p.args[2] = cfg.sensorMaxRateUs
-                            LogX.w("传感器降频(带延迟): ${old}us -> ${cfg.sensorMaxRateUs}us")
+                            LogX.w("传感器降�?带延�?: ${old}us -> ${cfg.sensorMaxRateUs}us")
                         }
                     }
                 })
-            LogX.hookSuccess("SensorManager", "registerListener(4参)")
+            LogX.hookSuccess("SensorManager", "registerListener(4�?")
         } catch (e: Exception) { LogX.w("异常: ${e.message}") }
 
         try {
@@ -80,7 +80,7 @@ object SensorOptHook {
                         if (period < HIGH_FREQ_THRESHOLD_US) {
                             val old = period
                             p.args[2] = cfg.sensorMaxRateUs
-                            LogX.w("传感器降频(带Handler): ${old}us -> ${cfg.sensorMaxRateUs}us")
+                            LogX.w("传感器降�?带Handler): ${old}us -> ${cfg.sensorMaxRateUs}us")
                         }
                     }
                 })

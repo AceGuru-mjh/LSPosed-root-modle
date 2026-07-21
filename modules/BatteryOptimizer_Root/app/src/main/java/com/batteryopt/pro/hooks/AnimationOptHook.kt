@@ -7,7 +7,7 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * 动画关闭优化 Hook（应用层）
+ * 动画关闭优化 Hook（应用层�?
  */
 object AnimationOptHook {
 

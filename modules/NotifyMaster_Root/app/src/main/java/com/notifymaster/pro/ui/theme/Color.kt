@@ -2,7 +2,7 @@ package com.notifymaster.pro.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// 青色主题（Root 版，与 NoRoot 一致）
+// 青色主题（Root 版，�?NoRoot 一致）
 val CyanLight = Color(0xFF004D40)
 val CyanPrimary = Color(0xFF00695C)
 val CyanContainer = Color(0xFF80CBC4)

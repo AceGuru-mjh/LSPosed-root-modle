@@ -7,17 +7,17 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * 防通知撤回 Hook（Root 版 - 应用进程内 + 系统级）
+ * 防通知撤回 Hook（Root �?- 应用进程�?+ 系统级）
  *
- * 功能：阻止应用主动 cancel 自己发出的通知（防撤回提示被清掉）。
+ * 功能：阻止应用主�?cancel 自己发出的通知（防撤回提示被清掉）�?
  *
- * 拦截路径：
+ * 拦截路径�?
  *  1. NotificationManager.cancel(int id)
  *  2. NotificationManager.cancel(String tag, int id)
  *  3. NotificationManager.cancelAll()
  *  4. NotificationManager.cancelAsUser(...)
  *
- * Root 版还可配合 NotifyListenerServiceHook 拦截系统侧 onNotificationRemoved。
+ * Root 版还可配�?NotifyListenerServiceHook 拦截系统�?onNotificationRemoved�?
  */
 object AntiRecallNotifyHook {
 
@@ -28,7 +28,7 @@ object AntiRecallNotifyHook {
         if (isApplied) return
         isApplied = true
 
-        LogX.i("防通知撤回启动（应用自身 cancel 全部拦截）")
+        LogX.i("防通知撤回启动（应用自�?cancel 全部拦截�?)
 
         hookCancel(lpparam)
     }

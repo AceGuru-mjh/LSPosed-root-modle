@@ -8,16 +8,16 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * zram优化(禁用swap/zram reset)（Root 专属）
+ * zram优化(禁用swap/zram reset)（Root 专属�?
  *
- * 通过 Shizuku 执行系统级操作。
- * 硬性限制：需 Shizuku root 级授权
+ * 通过 Shizuku 执行系统级操作�?
+ * 硬性限制：需 Shizuku root 级授�?
  */
 object ZramOptimizerHook {
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: BatteryConfig) {
         if (!cfg.zramOptimizerEnabled) return
-        LogX.i("ZramOptimizerHook 启动（Root 专属）")
+        LogX.i("ZramOptimizerHook 启动（Root 专属�?)
 
         XposedHelpers.findAndHookMethod("android.app.Application", lpparam.classLoader, "onCreate",
             object : XC_MethodHook() {
@@ -41,6 +41,6 @@ object ZramOptimizerHook {
         // 禁用 zram 节省内存管理开销
         ShizukuHelper.execShellSilent("echo 1 > /sys/block/zram0/reset")
         ShizukuHelper.execShellSilent("swapoff -a")
-        LogX.d("zram 已重置，swap 已关闭")
+        LogX.d("zram 已重置，swap 已关�?)
     }
 }

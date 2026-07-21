@@ -10,9 +10,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * B站视频下载解锁 Hook（Root 版，应用进程内）
+ * B站视频下载解�?Hook（Root 版，应用进程内）
  *
- * 与 NoRoot 版逻辑相同。
+ * �?NoRoot 版逻辑相同�?
  */
 object BiliDownloadHook {
 
@@ -31,7 +31,7 @@ object BiliDownloadHook {
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: VideoConfig) {
         if (!cfg.biliDownload) return
-        LogX.i("B站视频下载解锁 Hook 启动（Root 版）")
+        LogX.i("B站视频下载解�?Hook 启动（Root 版）")
 
         hookDownloadEntry(lpparam, cfg)
         hookUrlGetters(lpparam, cfg)
@@ -47,7 +47,7 @@ object BiliDownloadHook {
                         String::class.java, object : XC_MethodHook() {
                             override fun beforeHookedMethod(p: MethodHookParam) {
                                 val url = p.args.firstOrNull() as? String ?: return
-                                LogX.d("B站 download 触发: $url")
+                                LogX.d("B�?download 触发: $url")
                                 triggerDownload(url, "bili", cfg)
                             }
                         })
@@ -60,7 +60,7 @@ object BiliDownloadHook {
                             override fun beforeHookedMethod(p: MethodHookParam) {
                                 val avid = p.args.getOrNull(0) as? Int ?: return
                                 val cid = p.args.getOrNull(1) as? Int ?: return
-                                LogX.d("B站 downloadVideo avid=$avid cid=$cid")
+                                LogX.d("B�?downloadVideo avid=$avid cid=$cid")
                                 fetchPlayUrlAndDownload(avid, cid, cfg)
                             }
                         })
@@ -71,7 +71,7 @@ object BiliDownloadHook {
                         String::class.java, object : XC_MethodHook() {
                             override fun beforeHookedMethod(p: MethodHookParam) {
                                 val url = p.args.firstOrNull() as? String ?: return
-                                LogX.d("B站 startDownload 触发: $url")
+                                LogX.d("B�?startDownload 触发: $url")
                                 triggerDownload(url, "bili", cfg)
                             }
                         })
@@ -96,7 +96,7 @@ object BiliDownloadHook {
                             override fun afterHookedMethod(p: MethodHookParam) {
                                 try {
                                     val raw = p.result as? String ?: return
-                                    LogX.d("B站 $methodName 返回: $raw")
+                                    LogX.d("B�?$methodName 返回: $raw")
                                 } catch (_: Throwable) { }
                             }
                         })
@@ -120,7 +120,7 @@ object BiliDownloadHook {
                         Int::class.javaPrimitiveType, object : XC_MethodHook() {
                             override fun afterHookedMethod(p: MethodHookParam) {
                                 p.result = true
-                                LogX.d("B站画质解锁: qn=${p.args.firstOrNull()}")
+                                LogX.d("B站画质解�? qn=${p.args.firstOrNull()}")
                             }
                         })
                     LogX.hookSuccess(clsName, "isQualityAvailable")
@@ -150,7 +150,7 @@ object BiliDownloadHook {
                     setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 12) VideoSaver/1.0")
                 }
                 if (conn.responseCode != 200) {
-                    LogX.w("B站 playurl API 失败 HTTP ${conn.responseCode}")
+                    LogX.w("B�?playurl API 失败 HTTP ${conn.responseCode}")
                     conn.disconnect()
                     return@Thread
                 }
@@ -159,13 +159,13 @@ object BiliDownloadHook {
                 val urlRegex = Regex("\"url\"\\s*:\\s*\"(https?:[^\"]+)\"")
                 val firstUrl = urlRegex.find(body)?.groupValues?.getOrNull(1)
                 if (firstUrl.isNullOrBlank()) {
-                    LogX.w("B站 playurl 未找到 url 字段")
+                    LogX.w("B�?playurl 未找�?url 字段")
                     return@Thread
                 }
                 val cleaned = firstUrl.replace("\\u002F", "/")
                 triggerDownload(cleaned, "bili", cfg)
             } catch (e: Throwable) {
-                LogX.w("B站 playurl 获取异常: ${e.message}")
+                LogX.w("B�?playurl 获取异常: ${e.message}")
             }
         }.start()
     }
@@ -183,7 +183,7 @@ object BiliDownloadHook {
                     instanceFollowRedirects = true
                 }
                 if (conn.responseCode != 200) {
-                    LogX.w("B站视频下载失败 HTTP ${conn.responseCode}")
+                    LogX.w("B站视频下载失�?HTTP ${conn.responseCode}")
                     conn.disconnect()
                     return@Thread
                 }
@@ -199,7 +199,7 @@ object BiliDownloadHook {
                 }
                 conn.disconnect()
             } catch (e: Throwable) {
-                LogX.w("B站视频下载异常: ${e.message}")
+                LogX.w("B站视频下载异�? ${e.message}")
             }
         }.start()
     }

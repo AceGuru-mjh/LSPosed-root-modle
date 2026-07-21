@@ -7,12 +7,12 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * JobScheduler 优化 Hook（应用层）
+ * JobScheduler 优化 Hook（应用层�?
  */
 object JobSchedulerHook {
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: BatteryConfig) {
-        LogX.i("JobScheduler 优化启动 | 最小周期=${cfg.jobMinPeriodMs}ms idle约束=${cfg.jobRequireIdle}")
+        LogX.i("JobScheduler 优化启动 | 最小周�?${cfg.jobMinPeriodMs}ms idle约束=${cfg.jobRequireIdle}")
 
         hookSchedule(lpparam, cfg)
         hookCancel(lpparam)

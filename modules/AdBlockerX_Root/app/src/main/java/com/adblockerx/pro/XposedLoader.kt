@@ -35,9 +35,9 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 /**
  * AdBlockerX Pro - Xposed 模块唯一入口（Root 版）
  *
- * 实现 IXposedHookLoadPackage + IXposedHookZygoteInit。
+ * 实现 IXposedHookLoadPackage + IXposedHookZygoteInit�?
  *
- * 工作流程：
+ * 工作流程�?
  *  APP启动 -> handleLoadPackage ->
  *    判断是否为目标APP ->
  *    读取全局配置 ->
@@ -46,22 +46,22 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
  *    [3] OkHttp 广告拦截
  *    [4] URLConnection 广告拦截
  *    [5] 广告 SDK View 隐藏
- *    [实验] 追踪 / Cookie / 重定向 / Intent 拦截
+ *    [实验] 追踪 / Cookie / 重定�?/ Intent 拦截
  *    [Root] 系统hosts / PrivateDNS / DNS解析 / Shizuku桥接
  *    [Root 实验] iptables / VPN 拦截
  *
  * 硬性限制：
- *  - Root 系统级 Hook 必须先检查 ShizukuHelper.isShizukuAvailable()
+ *  - Root 系统�?Hook 必须先检�?ShizukuHelper.isShizukuAvailable()
  */
 class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
-        const val VERSION = "1.0.11"
+        const val VERSION = "1.0.12"
         var currentPkg: String? = null
     }
 
     override fun initZygote(param: IXposedHookZygoteInit.StartupParam) {
-        LogX.i("AdBlockerX Pro v$VERSION 初始化 | Root 版 | LSPatch/LSPosed 兼容")
+        LogX.i("AdBlockerX Pro v$VERSION 初始�?| Root �?| LSPatch/LSPosed 兼容")
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -76,7 +76,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
         if (ModuleConflictDetector.checkConflict(lpparam)) {
             LogX.w("检测到模块冲突，部分功能已禁用")
-            LogStore.add("warn", "模块冲突检测触发")
+            LogStore.add("warn", "模块冲突检测触�?)
         }
 
         initConfig(lpparam)
@@ -86,7 +86,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
         val cfg = loadConfig()
         LogX.debugEnabled = cfg.logEnabled
-        LogX.i("配置: 总开关=${cfg.masterEnabled} WebView=${cfg.webviewAdEnabled} OkHttp=${cfg.okHttpAdEnabled} " +
+        LogX.i("配置: 总开�?${cfg.masterEnabled} WebView=${cfg.webviewAdEnabled} OkHttp=${cfg.okHttpAdEnabled} " +
                 "URLConnection=${cfg.urlConnectionAdEnabled} Hosts=${cfg.hostsFilterEnabled} AdView=${cfg.adViewHideEnabled} " +
                 "[实验]Tracker=${cfg.trackerBlockEnabled} Cookie=${cfg.cookieCleanEnabled} " +
                 "Redirect=${cfg.redirectBlockEnabled} Intent=${cfg.intentInterceptorEnabled} " +
@@ -99,7 +99,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
             return
         }
 
-        // ===== [1] 内存 hosts 过滤器（最先初始化） =====
+        // ===== [1] 内存 hosts 过滤器（最先初始化�?=====
         if (cfg.hostsFilterEnabled) {
             HostsFilterHook.apply(lpparam, cfg)
         }
@@ -110,13 +110,13 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         if (cfg.urlConnectionAdEnabled) URLConnectionAdHook.apply(lpparam, cfg)
         if (cfg.adViewHideEnabled) AdViewHideHook.apply(lpparam, cfg)
 
-        // ===== 应用层实验性 =====
+        // ===== 应用层实验�?=====
         if (cfg.trackerBlockEnabled) TrackerBlockHook.apply(lpparam, cfg)
         if (cfg.cookieCleanEnabled) CookieCleanHook.apply(lpparam, cfg)
         if (cfg.redirectBlockEnabled) RedirectBlockHook.apply(lpparam, cfg)
         if (cfg.intentInterceptorEnabled) IntentInterceptorHook.apply(lpparam, cfg)
 
-        // ===== v1.0.6 新增（对标 AdClose） =====
+        // ===== v1.0.6 新增（对�?AdClose�?=====
         if (cfg.screenshotUnlockEnabled || cfg.shakeAdBlockEnabled || cfg.vpnDetectBypassEnabled) {
             AdClosePlusHook.apply(lpparam, cfg)
         }
@@ -127,11 +127,11 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         if (cfg.dnsResolverHookEnabled) DnsResolverHook.apply(lpparam, cfg)
         if (cfg.shizukuBridgeEnabled) ShizukuBridgeHook.apply(lpparam, cfg)
 
-        // ===== Root 实验性 =====
+        // ===== Root 实验�?=====
         if (cfg.iptablesBlockEnabled) IptablesBlockHook.apply(lpparam, cfg)
         if (cfg.vpnBasedBlockEnabled) VpnBasedBlockHook.apply(lpparam, cfg)
 
-        // ===== [Task24] 系统级增强 =====
+        // ===== [Task24] 系统级增�?=====
         if (cfg.dnsCacheFlushEnabled) DnsCacheFlushHook.apply(lpparam, cfg)
 
         hookAppLifecycle(lpparam)
@@ -143,7 +143,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         }
     }
 
-    /** 目标APP包名白名单 */
+    /** 目标APP包名白名�?*/
     private fun isTargetApp(pkg: String) = pkg in listOf(
         "com.android.chrome",
         "com.mi.globalbrowser",

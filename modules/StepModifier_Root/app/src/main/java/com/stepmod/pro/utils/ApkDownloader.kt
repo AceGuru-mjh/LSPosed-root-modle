@@ -37,7 +37,7 @@ object ApkDownloader {
         onProgress: (Float) -> Unit,
         onStatus: (String) -> Unit = {}
     ): DownloadResult {
-        onStatus("开始下载")
+        onStatus("开始下�?)
         return try {
             val cacheDir = File(context.cacheDir, "updates").apply { mkdirs() }
             val apkFile = File(cacheDir, fileName)
@@ -61,7 +61,7 @@ object ApkDownloader {
                 return DownloadResult(false, null, "HTTP ${conn.responseCode}", null)
             }
             val total = conn.contentLengthLong
-            onStatus("下载中... 0%")
+            onStatus("下载�?.. 0%")
 
             val md = MessageDigest.getInstance("SHA-256")
             FileOutputStream(apkFile).use { out ->
@@ -79,7 +79,7 @@ object ApkDownloader {
                             val now = System.currentTimeMillis()
                             if (now - lastReportTime > 200) {
                                 onProgress(p)
-                                onStatus("下载中... ${(p * 100).toInt()}%")
+                                onStatus("下载�?.. ${(p * 100).toInt()}%")
                                 lastReportTime = now
                             }
                         }
@@ -90,7 +90,7 @@ object ApkDownloader {
             onProgress(1f)
             val sha256 = md.digest().joinToString("") { "%02x".format(it) }
             LogX.i("APK 下载完成: ${apkFile.absolutePath} (${apkFile.length() / 1024}KB) sha256=$sha256")
-            onStatus("下载完成，准备安装")
+            onStatus("下载完成，准备安�?)
 
             showDownloadCompleteNotification(context, apkFile)
             promptInstall(context, apkFile)
@@ -117,7 +117,7 @@ object ApkDownloader {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // REQUEST_INSTALL_PACKAGES 权限在 Manifest 声明
+                // REQUEST_INSTALL_PACKAGES 权限�?Manifest 声明
             }
         }
         try {
@@ -132,7 +132,7 @@ object ApkDownloader {
             try {
                 context.startActivity(fallback)
             } catch (_: Exception) {
-                LogX.e("安装 Intent 均失败，请手动安装", e)
+                LogX.e("安装 Intent 均失败，请手动安�?, e)
             }
         }
     }

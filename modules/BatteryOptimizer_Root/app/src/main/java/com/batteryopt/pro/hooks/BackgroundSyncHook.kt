@@ -7,12 +7,12 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * ContentResolver 同步优化 Hook（应用层）
+ * ContentResolver 同步优化 Hook（应用层�?
  */
 object BackgroundSyncHook {
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: BatteryConfig) {
-        LogX.i("Sync 同步优化启动 | 最小间隔=${cfg.syncMinIntervalMs}ms")
+        LogX.i("Sync 同步优化启动 | 最小间�?${cfg.syncMinIntervalMs}ms")
 
         hookRequestSync(lpparam, cfg)
         hookAddPeriodicSync(lpparam, cfg)
@@ -38,7 +38,7 @@ object BackgroundSyncHook {
                         val last = lastRequestTs[authority] ?: 0L
                         if (now - last < cfg.syncMinIntervalMs) {
                             p.result = null
-                            LogX.w("requestSync 节流: $authority 间隔不足，跳过")
+                            LogX.w("requestSync 节流: $authority 间隔不足，跳�?)
                         } else {
                             lastRequestTs[authority] = now
                             LogX.d("requestSync 放行: $authority")

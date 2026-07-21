@@ -30,12 +30,12 @@ fun FeaturesScreen(cfg: GameConfig, onConfigChange: (GameConfig) -> Unit) {
             .verticalScroll(scroll)
             .padding(16.dp)
     ) {
-        // ===== 应用层功能 =====
-        Text("应用层功能", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        // ===== 应用层功�?=====
+        Text("应用层功�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "机型伪装", "伪装 Build/SystemProperties 为旗舰机型，规避机型检测",
+            "机型伪装", "伪装 Build/SystemProperties 为旗舰机型，规避机型检�?,
             cfg.deviceSpoofEnabled,
             { val nc = cfg.copy(deviceSpoofEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
@@ -49,29 +49,29 @@ fun FeaturesScreen(cfg: GameConfig, onConfigChange: (GameConfig) -> Unit) {
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "环境隐藏", "隐藏 Xposed/Shizuku/LSPatch/Magisk 等敏感环境",
+            "环境隐藏", "隐藏 Xposed/Shizuku/LSPatch/Magisk 等敏感环�?,
             cfg.detectionHideEnabled,
             { val nc = cfg.copy(detectionHideEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "进程优化", "提升渲染线程优先级 + Shizuku 冻结后台进程",
+            "进程优化", "提升渲染线程优先�?+ Shizuku 冻结后台进程",
             cfg.processOptimizeEnabled,
             { val nc = cfg.copy(processOptimizeEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "分辨率伪装", "伪装 Display/DisplayMetrics 为 2K，强制加载高清材质",
+            "分辨率伪�?, "伪装 Display/DisplayMetrics �?2K，强制加载高清材�?,
             cfg.resolutionSpoofEnabled,
             { val nc = cfg.copy(resolutionSpoofEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
 
         Spacer(Modifier.height(20.dp))
 
-        // ===== 系统级功能（需 Shizuku）=====
-        Text("系统级功能（需 Shizuku）", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        // ===== 系统级功能（需 Shizuku�?====
+        Text("系统级功能（需 Shizuku�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
@@ -91,7 +91,7 @@ fun FeaturesScreen(cfg: GameConfig, onConfigChange: (GameConfig) -> Unit) {
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "Shizuku 系统属性修改", "通过 Shizuku setprop 修改 ro.surface_flinger.* 刷新率属性",
+            "Shizuku 系统属性修�?, "通过 Shizuku setprop 修改 ro.surface_flinger.* 刷新率属�?,
             cfg.shizukuBridgeEnabled,
             { val nc = cfg.copy(shizukuBridgeEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             systemLevel = true
@@ -99,12 +99,12 @@ fun FeaturesScreen(cfg: GameConfig, onConfigChange: (GameConfig) -> Unit) {
 
         Spacer(Modifier.height(20.dp))
 
-        // ===== 实验性 - 应用层 =====
+        // ===== 实验�?- 应用�?=====
         Text("实验性功能（应用层）", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "触摸采样率提升", "Hook InputEventReceiver/InputQueue 提升事件线程优先级",
+            "触摸采样率提�?, "Hook InputEventReceiver/InputQueue 提升事件线程优先�?,
             cfg.touchSamplingBoostEnabled,
             { val nc = cfg.copy(touchSamplingBoostEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true
@@ -112,7 +112,7 @@ fun FeaturesScreen(cfg: GameConfig, onConfigChange: (GameConfig) -> Unit) {
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "网络延迟优化", "Hook Socket 设置 TCP_NODELAY + 扩大接收缓冲区",
+            "网络延迟优化", "Hook Socket 设置 TCP_NODELAY + 扩大接收缓冲�?,
             cfg.networkLatencyOptEnabled,
             { val nc = cfg.copy(networkLatencyOptEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true
@@ -120,7 +120,7 @@ fun FeaturesScreen(cfg: GameConfig, onConfigChange: (GameConfig) -> Unit) {
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "音频优先级提升", "Hook AudioTrack 设 PERFORMANCE_MODE_LOW_LATENCY + 线程优先级",
+            "音频优先级提�?, "Hook AudioTrack �?PERFORMANCE_MODE_LOW_LATENCY + 线程优先�?,
             cfg.audioPriorityBoostEnabled,
             { val nc = cfg.copy(audioPriorityBoostEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true
@@ -136,12 +136,12 @@ fun FeaturesScreen(cfg: GameConfig, onConfigChange: (GameConfig) -> Unit) {
 
         Spacer(Modifier.height(20.dp))
 
-        // ===== 实验性 - 系统级 =====
-        Text("实验性功能（系统级，需 Shizuku）", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        // ===== 实验�?- 系统�?=====
+        Text("实验性功能（系统级，需 Shizuku�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "游戏模式激活", "通过 Shizuku 执行 cmd game_mode / settings put global game_mode",
+            "游戏模式激�?, "通过 Shizuku 执行 cmd game_mode / settings put global game_mode",
             cfg.gameModeActivationEnabled,
             { val nc = cfg.copy(gameModeActivationEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true, systemLevel = true
@@ -149,7 +149,7 @@ fun FeaturesScreen(cfg: GameConfig, onConfigChange: (GameConfig) -> Unit) {
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "CPU 大核亲和性", "通过 Shizuku 写 /sys/devices/system/cpu/cpuN/cpufreq 节点",
+            "CPU 大核亲和�?, "通过 Shizuku �?/sys/devices/system/cpu/cpuN/cpufreq 节点",
             cfg.cpuBigCoreAffinityEnabled,
             { val nc = cfg.copy(cpuBigCoreAffinityEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true, systemLevel = true
@@ -157,12 +157,12 @@ fun FeaturesScreen(cfg: GameConfig, onConfigChange: (GameConfig) -> Unit) {
 
         Spacer(Modifier.height(20.dp))
 
-        // ===== Task24 系统级增强 =====
-        Text("系统级增强（Task24 新增）", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        // ===== Task24 系统级增�?=====
+        Text("系统级增强（Task24 新增�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "内核参数优化", "IO 调度器 noop + 大核强制在线 + performance governor + sched 优化",
+            "内核参数优化", "IO 调度�?noop + 大核强制在线 + performance governor + sched 优化",
             cfg.kernelTunerEnabled,
             { val nc = cfg.copy(kernelTunerEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             systemLevel = true
@@ -170,7 +170,7 @@ fun FeaturesScreen(cfg: GameConfig, onConfigChange: (GameConfig) -> Unit) {
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "GPU 频率锁定", "锁定 GPU devfreq 为最大频率 + performance governor",
+            "GPU 频率锁定", "锁定 GPU devfreq 为最大频�?+ performance governor",
             cfg.gpuFreqLockEnabled,
             { val nc = cfg.copy(gpuFreqLockEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             systemLevel = true

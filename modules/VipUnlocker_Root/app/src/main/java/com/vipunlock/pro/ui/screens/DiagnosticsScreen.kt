@@ -64,9 +64,9 @@ fun DiagnosticsScreen() {
         DiagCard(
             icon = if (xposedActive) Icons.Default.CheckCircle else Icons.Default.Warning,
             title = "Xposed 框架",
-            status = if (xposedActive) "已激活" else "未激活（模块进程内）",
-            detail = if (xposedActive) "XposedBridge 已加载，Hook 可正常工作"
-                     else "当前在模块自身进程，XposedBridge 不可见属正常。实际 Hook 生效需在目标 APP 内验证",
+            status = if (xposedActive) "已激�? else "未激活（模块进程内）",
+            detail = if (xposedActive) "XposedBridge 已加载，Hook 可正常工�?
+                     else "当前在模块自身进程，XposedBridge 不可见属正常。实�?Hook 生效需在目�?APP 内验�?,
             ok = xposedActive
         )
         Spacer(Modifier.height(8.dp))
@@ -74,9 +74,9 @@ fun DiagnosticsScreen() {
         DiagCard(
             icon = if (shizukuActive) Icons.Default.CheckCircle else Icons.Default.Info,
             title = "Shizuku 服务",
-            status = if (shizukuActive) "已连接" else "未连接",
-            detail = if (shizukuActive) "Shizuku 服务运行中，系统级命令可执行（setprop/pm grant/hosts 修改）"
-                     else "Shizuku 未运行或未授权。Root 版系统级功能不可用，应用层功能不受影响",
+            status = if (shizukuActive) "已连�? else "未连�?,
+            detail = if (shizukuActive) "Shizuku 服务运行中，系统级命令可执行（setprop/pm grant/hosts 修改�?
+                     else "Shizuku 未运行或未授权。Root 版系统级功能不可用，应用层功能不受影�?,
             ok = shizukuActive
         )
         Spacer(Modifier.height(8.dp))
@@ -93,9 +93,9 @@ fun DiagnosticsScreen() {
         val cfg = remember { try { ConfigManager.getGlobalConfig() } catch (_: Throwable) { null } }
         DiagCard(
             icon = Icons.Default.BugReport,
-            title = "配置状态",
-            status = if (cfg != null) "已加载" else "未初始化",
-            detail = if (cfg != null) "总开关: ${if (cfg.masterEnabled) "开" else "关"}\n配置文件: /data/data/${ctx.packageName}/shared_prefs/${ConfigManager.PREFS_NAME}.xml"
+            title = "配置状�?,
+            status = if (cfg != null) "已加�? else "未初始化",
+            detail = if (cfg != null) "总开�? ${if (cfg.masterEnabled) "开" else "�?}\n配置文件: /data/data/${ctx.packageName}/shared_prefs/${ConfigManager.PREFS_NAME}.xml"
                      else "ConfigManager 未初始化",
             ok = cfg != null
         )
@@ -106,11 +106,11 @@ fun DiagnosticsScreen() {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("诊断说明", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text("• 本页显示模块自身进程的状态，非目标 APP 进程", style = MaterialTheme.typography.bodySmall)
-                Text("• Xposed 框架状态在此处显示\"未激活\"是正常的", style = MaterialTheme.typography.bodySmall)
-                Text("• 实际 Hook 是否生效需在目标 APP 内通过 LSPosed 日志验证", style = MaterialTheme.typography.bodySmall)
-                Text("• Shizuku 状态需先安装并启动 Shizuku APP", style = MaterialTheme.typography.bodySmall)
-                Text("• Root 系统级功能（setprop/pm grant/hosts）依赖 Shizuku", style = MaterialTheme.typography.bodySmall)
+                Text("�?本页显示模块自身进程的状态，非目�?APP 进程", style = MaterialTheme.typography.bodySmall)
+                Text("�?Xposed 框架状态在此处显示\"未激活\"是正常的", style = MaterialTheme.typography.bodySmall)
+                Text("�?实际 Hook 是否生效需在目�?APP 内通过 LSPosed 日志验证", style = MaterialTheme.typography.bodySmall)
+                Text("�?Shizuku 状态需先安装并启动 Shizuku APP", style = MaterialTheme.typography.bodySmall)
+                Text("�?Root 系统级功能（setprop/pm grant/hosts）依�?Shizuku", style = MaterialTheme.typography.bodySmall)
             }
         }
         Spacer(Modifier.height(32.dp))

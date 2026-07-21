@@ -10,9 +10,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * 热更新检查器（增强版）
+ * 热更新检查器（增强版�?
  *
- * 数据源: https://api.github.com/repos/AceGuru-mjh/LSPosed-root-modle/releases/latest
+ * 数据�? https://api.github.com/repos/AceGuru-mjh/LSPosed-root-modle/releases/latest
  */
 object UpdateChecker {
 
@@ -57,7 +57,7 @@ object UpdateChecker {
         if (!force) {
             val last = prefs()?.getLong(KEY_LAST_CHECK_TIME, 0L) ?: 0L
             if (System.currentTimeMillis() - last < MIN_CHECK_INTERVAL_MS) {
-                Log.d(TAG, "距上次检查不足5分钟，返回缓存")
+                Log.d(TAG, "距上次检查不�?分钟，返回缓�?)
                 return cachedInfo ?: loadCachedInfo(currentVersion)
             }
         }
@@ -90,7 +90,7 @@ object UpdateChecker {
             conn.disconnect()
             parseRelease(raw, currentVersion)
         } catch (e: Exception) {
-            Log.e(TAG, "检查更新失败: ${e.message}")
+            Log.e(TAG, "检查更新失�? ${e.message}")
             null
         }
     }

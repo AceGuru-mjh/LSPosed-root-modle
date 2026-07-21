@@ -46,14 +46,14 @@ fun FeatureCard(
                     )
                     if (systemLevel) {
                         Text(
-                            text = "  系统级",
+                            text = "  系统�?,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.tertiary
                         )
                     }
                     if (experimental) {
                         Text(
-                            text = "  实验性",
+                            text = "  实验�?,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary
                         )

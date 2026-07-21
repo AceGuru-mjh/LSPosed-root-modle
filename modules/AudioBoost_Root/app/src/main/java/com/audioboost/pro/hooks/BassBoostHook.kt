@@ -7,11 +7,11 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * 低音增强Hook（仅应用层，与 NoRoot 版相同）
+ * 低音增强Hook（仅应用层，�?NoRoot 版相同）
  *
- * 拦截路径：
- *  1. BassBoost.setStrength(short) - 强制设置高 strength（0~1000）
- *  2. BassBoost.getStrength() - 返回伪造值
+ * 拦截路径�?
+ *  1. BassBoost.setStrength(short) - 强制设置�?strength�?~1000�?
+ *  2. BassBoost.getStrength() - 返回伪造�?
  *  3. BassBoost.getStrengthSupported() - 强制返回 true
  */
 object BassBoostHook {

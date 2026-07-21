@@ -8,17 +8,17 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * 剪贴板保护Hook（应用层）
+ * 剪贴板保护Hook（应用层�?
  *
- * 功能：
+ * 功能�?
  *  1. 记录 APP 读取剪贴板行为（防偷读）
- *  2. 可选阻断 getPrimaryClip 返回（防 APP 偷读剪贴板内容）
+ *  2. 可选阻�?getPrimaryClip 返回（防 APP 偷读剪贴板内容）
  */
 object ClipboardGuardHook {
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: PrivacyConfig) {
         if (!cfg.clipboardGuardEnabled) return
-        LogX.i("剪贴板保护启动（应用层）：阻断=${cfg.clipboardBlockRead}")
+        LogX.i("剪贴板保护启动（应用层）：阻�?${cfg.clipboardBlockRead}")
 
         hookClipboardManager(lpparam, cfg.clipboardBlockRead)
     }
@@ -31,8 +31,8 @@ object ClipboardGuardHook {
             try {
                 XposedHelpers.findAndHookMethod(cm, "getPrimaryClip", object : XC_MethodHook() {
                     override fun beforeHookedMethod(p: MethodHookParam) {
-                        LogX.w("检测到APP读取剪贴板: ${p.thisObject?.javaClass?.name}")
-                        try { LogStore.add("blocked", "阻止剪贴板读取") } catch (_: Exception) { }
+                        LogX.w("检测到APP读取剪贴�? ${p.thisObject?.javaClass?.name}")
+                        try { LogStore.add("blocked", "阻止剪贴板读�?) } catch (_: Exception) { }
                         try { LogStore.incrementCounter(1) } catch (_: Exception) { }
                         if (blockRead) p.result = null
                     }
@@ -43,7 +43,7 @@ object ClipboardGuardHook {
             try {
                 XposedHelpers.findAndHookMethod(cm, "getPrimaryClipDescription", object : XC_MethodHook() {
                     override fun beforeHookedMethod(p: MethodHookParam) {
-                        LogX.d("APP读取剪贴板描述")
+                        LogX.d("APP读取剪贴板描�?)
                         if (blockRead) p.result = null
                     }
                 })

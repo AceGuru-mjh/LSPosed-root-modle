@@ -19,30 +19,30 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 /**
  * NotifyMaster Pro - Xposed 模块唯一入口（Root 版）
  *
- * 实现 IXposedHookLoadPackage + IXposedHookZygoteInit。
+ * 实现 IXposedHookLoadPackage + IXposedHookZygoteInit�?
  *
- * 工作流程：
+ * 工作流程�?
  *  APP启动 -> handleLoadPackage ->
  *    判断是否为目标APP ->
  *    读取全局配置 ->
  *    [1] 通知过滤 [2] 防通知撤回 [3] 通知历史 [4] 通知美化
- *    [实验] 通知分组 / 优先级覆盖 / 静默通知
+ *    [实验] 通知分组 / 优先级覆�?/ 静默通知
  *    [Root] 系统通知策略 / NotificationListenerService / 全局过滤 / Shizuku 桥接
  *
  * 硬性限制：
- *  - Root 系统级 Hook 必须先检查 ShizukuHelper.isShizukuAvailable()
- *  - 系统级 Hook 失败时降级为应用层 Hook
+ *  - Root 系统�?Hook 必须先检�?ShizukuHelper.isShizukuAvailable()
+ *  - 系统�?Hook 失败时降级为应用�?Hook
  *  - LSPatch 模式下系统级 Hook 不可用，仅应用层 Hook 生效
  */
 class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
-        const val VERSION = "1.0.11"
+        const val VERSION = "1.0.12"
         var currentPkg: String? = null
     }
 
     override fun initZygote(param: IXposedHookZygoteInit.StartupParam) {
-        LogX.i("NotifyMaster Pro v$VERSION 初始化 | Root 版 | LSPatch/LSPosed 兼容")
+        LogX.i("NotifyMaster Pro v$VERSION 初始�?| Root �?| LSPatch/LSPosed 兼容")
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -57,7 +57,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
         if (ModuleConflictDetector.checkConflict(lpparam)) {
             LogX.w("检测到模块冲突，部分功能已禁用")
-            LogStore.add("warn", "模块冲突检测触发")
+            LogStore.add("warn", "模块冲突检测触�?)
         }
 
         initConfig(lpparam)
@@ -67,10 +67,10 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
         val cfg = loadConfig()
         cfg.packageName = pkg
-        LogX.i("配置: 总开关=${cfg.masterEnabled} 过滤=${cfg.notifyFilterEnabled} " +
-                "防撤回=${cfg.antiRecallNotifyEnabled} 历史=${cfg.notifyHistoryEnabled} " +
+        LogX.i("配置: 总开�?${cfg.masterEnabled} 过滤=${cfg.notifyFilterEnabled} " +
+                "防撤�?${cfg.antiRecallNotifyEnabled} 历史=${cfg.notifyHistoryEnabled} " +
                 "美化=${cfg.notifyBeautifyEnabled} [实验]分组=${cfg.batchNotifyEnabled} " +
-                "优先级=${cfg.priorityOverrideEnabled} 静默=${cfg.silentNotifyEnabled} " +
+                "优先�?${cfg.priorityOverrideEnabled} 静默=${cfg.silentNotifyEnabled} " +
                 "[Root]系统通知=${cfg.systemNotifyHookEnabled} Listener=${cfg.notifyListenerHookEnabled} " +
                 "全局过滤=${cfg.globalNotifyFilterEnabled} Shizuku桥接=${cfg.shizukuNotifyBridgeEnabled}")
 
@@ -79,26 +79,26 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
             return
         }
 
-        // ===== 基础功能（同 NoRoot） =====
+        // ===== 基础功能（同 NoRoot�?=====
         if (cfg.notifyFilterEnabled) NotifyFilterHook.apply(lpparam, cfg)
         if (cfg.antiRecallNotifyEnabled) AntiRecallNotifyHook.apply(lpparam, cfg)
         if (cfg.notifyHistoryEnabled) NotifyHistoryHook.apply(lpparam, cfg)
         if (cfg.notifyBeautifyEnabled) NotifyBeautifyHook.apply(lpparam, cfg)
 
-        // ===== 应用层实验性（同 NoRoot） =====
+        // ===== 应用层实验性（�?NoRoot�?=====
         if (cfg.batchNotifyEnabled) BatchNotifyHook.apply(lpparam, cfg)
         if (cfg.priorityOverrideEnabled) PriorityOverrideHook.apply(lpparam, cfg)
         if (cfg.silentNotifyEnabled) SilentNotifyHook.apply(lpparam, cfg)
 
-        // ===== Root 专属：系统级 Hook（需 Shizuku） =====
+        // ===== Root 专属：系统级 Hook（需 Shizuku�?=====
         if (cfg.systemNotifyHookEnabled) SystemNotifyHook.apply(lpparam, cfg)
         if (cfg.notifyListenerHookEnabled) NotifyListenerServiceHook.apply(lpparam, cfg)
 
-        // ===== Root 实验性 =====
+        // ===== Root 实验�?=====
         if (cfg.globalNotifyFilterEnabled) GlobalNotifyFilterHook.apply(lpparam, cfg)
         if (cfg.shizukuNotifyBridgeEnabled) ShizukuNotifyBridgeHook.apply(lpparam, cfg)
 
-        // ===== [Task24] 系统级增强 =====
+        // ===== [Task24] 系统级增�?=====
         if (cfg.globalNotificationQueueEnabled) GlobalNotificationQueueHook.apply(lpparam, cfg)
 
         // ===== Root v1.1.0：系统级 Root 增强 =====
@@ -113,7 +113,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         }
     }
 
-    /** 目标APP包名白名单 */
+    /** 目标APP包名白名�?*/
     private fun isTargetApp(pkg: String) = pkg in listOf(
         "com.tencent.mm", "com.tencent.mobileqq",
         "com.eg.android.AlipayGphone", "com.taobao.taobao",
