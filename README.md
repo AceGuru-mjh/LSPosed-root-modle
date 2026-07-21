@@ -1,5 +1,14 @@
 # LSPosed Root 模块合集
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Modules-9-blue?style=flat-square" />
+  <img src="https://img.shields.io/badge/Hooks-134-red?style=flat-square" />
+  <img src="https://img.shields.io/badge/LSPosed-Zygisk-green?style=flat-square" />
+  <img src="https://img.shields.io/badge/Shizuku-Required-orange?style=flat-square" />
+  <img src="https://img.shields.io/github/actions/workflow/status/AceGuru-mjh/LSPosed-root-modle/build.yml?style=flat-square" />
+  <img src="https://img.shields.io/github/v/release/AceGuru-mjh/LSPosed-root-modle?style=flat-square" />
+</p>
+
 > 需 **Root + Magisk/LSPosed + Shizuku** · 9 个系统级增强模块
 
 ## 模块列表
