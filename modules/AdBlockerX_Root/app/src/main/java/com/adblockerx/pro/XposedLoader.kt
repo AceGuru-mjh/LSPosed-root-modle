@@ -70,8 +70,8 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         val pkg = lpparam.packageName ?: return
         if (!isTargetApp(pkg)) return
 
-        LogX.i("===== APP启动: $pkg =====")
         currentPkg = pkg
+        LogX.i("=== AdBlockerX v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (EnvDetector.isLocalMode) "local" else "integrated"} ===")
 
         LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
         if (ModuleConflictDetector.checkConflict(lpparam)) {
@@ -80,6 +80,9 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         }
 
         initConfig(lpparam)
+        if (!EnvDetector.isLocalMode) {
+            try { Thread.sleep(100) } catch (_: Throwable) { }
+        }
 
         val cfg = loadConfig()
         LogX.debugEnabled = cfg.logEnabled
