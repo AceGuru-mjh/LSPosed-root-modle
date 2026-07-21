@@ -46,11 +46,13 @@ import com.stepmod.pro.ui.screens.HomeScreen
 import com.stepmod.pro.ui.screens.UpdateScreen
 import com.stepmod.pro.ui.theme.StepModifierTheme
 import com.stepmod.pro.utils.ConfigManager
+import com.stepmod.pro.utils.LogStore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ConfigManager.init(applicationContext)
+        LogStore.init(applicationContext)
         setContent {
             MainScreen()
         }

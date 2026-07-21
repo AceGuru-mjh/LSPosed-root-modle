@@ -45,11 +45,13 @@ import com.privacyguard.pro.ui.screens.FeaturesScreen
 import com.privacyguard.pro.ui.screens.HomeScreen
 import com.privacyguard.pro.ui.theme.PrivacyGuardTheme
 import com.privacyguard.pro.utils.ConfigManager
+import com.privacyguard.pro.utils.LogStore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ConfigManager.init(applicationContext)
+        LogStore.init(applicationContext)
         setContent {
             PrivacyGuardTheme {
                 MainScreen()

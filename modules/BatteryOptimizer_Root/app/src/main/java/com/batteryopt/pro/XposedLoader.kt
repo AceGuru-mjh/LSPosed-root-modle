@@ -5,6 +5,7 @@ import com.batteryopt.pro.hooks.*
 import com.batteryopt.pro.models.BatteryConfig
 import com.batteryopt.pro.utils.ConfigManager
 import com.batteryopt.pro.utils.HookConfigReader
+import com.batteryopt.pro.utils.LogStore
 import com.batteryopt.pro.utils.LogX
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
@@ -130,7 +131,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
             val at = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader)
             val cat = XposedHelpers.callStaticMethod(at, "currentActivityThread")
             val app = XposedHelpers.callMethod(cat, "getApplication") as? Application
-            if (app != null) ConfigManager.init(app)
+            if (app != null) { ConfigManager.init(app); LogStore.init(app) }
         } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
     }
 
@@ -141,7 +142,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(p: MethodHookParam) {
                         val app = p.thisObject as? Application ?: return
-                        try { ConfigManager.init(app) } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+                        try { ConfigManager.init(app); LogStore.init(app) } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
                     }
                 })
         } catch (e: Throwable) { LogX.w("异常: ${e.message}") }

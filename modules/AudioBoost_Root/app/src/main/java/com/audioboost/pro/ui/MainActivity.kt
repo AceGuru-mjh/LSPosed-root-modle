@@ -40,11 +40,13 @@ import com.audioboost.pro.ui.screens.FeaturesScreen
 import com.audioboost.pro.ui.screens.HomeScreen
 import com.audioboost.pro.ui.theme.AudioBoostTheme
 import com.audioboost.pro.utils.ConfigManager
+import com.audioboost.pro.utils.LogStore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ConfigManager.init(applicationContext)
+        LogStore.init(applicationContext)
         setContent {
             MainScreen()
         }

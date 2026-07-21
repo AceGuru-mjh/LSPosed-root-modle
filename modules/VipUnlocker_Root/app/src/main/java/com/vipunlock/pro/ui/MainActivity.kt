@@ -46,11 +46,13 @@ import com.vipunlock.pro.ui.screens.HomeScreen
 import com.vipunlock.pro.ui.screens.UpdateScreen
 import com.vipunlock.pro.ui.theme.VipUnlockerTheme
 import com.vipunlock.pro.utils.ConfigManager
+import com.vipunlock.pro.utils.LogStore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ConfigManager.init(applicationContext)
+        LogStore.init(applicationContext)
         setContent {
             MainScreen()
         }

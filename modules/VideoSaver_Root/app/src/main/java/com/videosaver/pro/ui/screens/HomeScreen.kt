@@ -5,8 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,24 +18,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.VideoLibrary
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -47,60 +40,29 @@ import com.videosaver.pro.XposedLoader
 import com.videosaver.pro.models.VideoConfig
 import com.videosaver.pro.services.FloatingBallService
 import com.videosaver.pro.utils.ConfigManager
-import com.videosaver.pro.utils.VideoFileSaver
+import com.videosaver.pro.utils.LogEntry
+import com.videosaver.pro.utils.LogStore
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
     cfg: VideoConfig,
     onConfigChange: (VideoConfig) -> Unit,
-    darkMode: Boolean,
-    onToggleDarkMode: () -> Unit
+    darkMode: Boolean = false,
+    onToggleDarkMode: () -> Unit = {}
 ) {
-    val ctx = LocalContext.current
-    var importMessage by remember { mutableStateOf<String?>(null) }
     val scroll = rememberScrollState()
-    val logs = remember { mutableStateListOf<String>() }
-    val videosCount = remember { mutableStateOf(0L) }
-    val adsStrippedCount = remember { mutableStateOf(0L) }
+    val context = LocalContext.current
+    val counter = remember { mutableLongStateOf(0L) }
+    val ballRunning = remember { mutableStateOf(false) }
+    val recentLogs = remember { mutableStateOf<List<LogEntry>>(emptyList()) }
 
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        try {
-            val json = ctx.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
-            if (json.isBlank()) {
-                importMessage = "导入失败：文件为空"
-                return@rememberLauncherForActivityResult
-            }
-            val ok = ConfigManager.importConfig(json)
-            importMessage = if (ok) {
-                onConfigChange(ConfigManager.getGlobalConfig())
-                "导入成功"
-            } else {
-                "导入失败：JSON 格式错误或解析失败"
-            }
-        } catch (e: Exception) {
-            importMessage = "导入失败: ${e.message}"
-        }
-    }
-
-    fun exportConfig() {
-        try {
-            val json = ConfigManager.exportConfig()
-            val sendIntent = Intent().apply {
-                action = Intent.ACTION_SEND
-                putExtra(Intent.EXTRA_TEXT, json)
-                putExtra(Intent.EXTRA_TITLE, "VideoSaver_Pro_config.json")
-                type = "application/json"
-            }
-            ctx.startActivity(
-                Intent.createChooser(sendIntent, "导出配置到...").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
-            logs.add("[${System.currentTimeMillis()}] 已导出配置")
-        } catch (e: Exception) {
-            importMessage = "导出失败: ${e.message}"
-        }
+    LaunchedEffect(Unit) {
+        try { counter.longValue = ConfigManager.getBlockedCount() } catch (_: Throwable) {}
+        try { counter.longValue = LogStore.getCounter() } catch (_: Throwable) {}
+        try { recentLogs.value = LogStore.getRecentLogs(10) } catch (_: Throwable) {}
     }
 
     Column(
@@ -115,22 +77,13 @@ fun HomeScreen(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         ) {
             Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    IconButton(onClick = onToggleDarkMode) {
-                        Icon(
-                            imageVector = if (darkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = "切换暗色/亮色模式",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
                 Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 Spacer(Modifier.height(8.dp))
                 Text("VideoSaver Pro", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 Text("v${XposedLoader.VERSION}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "已处理: ${videosCount.value + adsStrippedCount.value} 次",
+                    "已处理: ${counter.longValue} 次",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -159,19 +112,35 @@ fun HomeScreen(
         }
 
         Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("当前保存路径", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
-                val pathStr = VideoFileSaver.resolveSaveDirString(cfg.customSavePath)
-                Text(
-                    pathStr,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "Root 版可通过 Shizuku 写入受限路径",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("悬浮控制球", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (ballRunning.value) "运行中 - 点击右侧关闭" else "未运行 - 点击右侧启动",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = ballRunning.value,
+                    onCheckedChange = { newVal ->
+                        if (newVal) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
+                                val intent = Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:${context.packageName}")
+                                )
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            } else {
+                                startFloatingBall(context)
+                                ballRunning.value = true
+                            }
+                        } else {
+                            stopFloatingBall(context)
+                            ballRunning.value = false
+                        }
+                    }
                 )
             }
         }
@@ -181,61 +150,49 @@ fun HomeScreen(
                 Text("实时统计", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 Row {
-                    StatBox("已保存视频", videosCount.value.toString(), modifier = Modifier.weight(1f))
-                    StatBox("已剥离广告", adsStrippedCount.value.toString(), modifier = Modifier.weight(1f))
+                    StatBox("已保存", counter.longValue.toString(), modifier = Modifier.weight(1f))
+                    StatBox("日志", "${recentLogs.value.size}", modifier = Modifier.weight(1f))
                 }
             }
         }
 
         Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("快捷操作", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { logs.clear() }, modifier = Modifier.weight(1f)) {
-                        Text("清空日志")
-                    }
-                    OutlinedButton(onClick = { exportConfig() }, modifier = Modifier.weight(1f)) {
-                        Text("导出")
-                    }
-                    OutlinedButton(onClick = { importLauncher.launch("*/*") }, modifier = Modifier.weight(1f)) {
-                        Text("导入")
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        startFloatingBall(ctx)
-                        logs.add("[${System.currentTimeMillis()}] 已请求启动悬浮球")
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("启动悬浮球控制面板")
-                }
-                importMessage?.let {
-                    Spacer(Modifier.height(8.dp))
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
-                }
-            }
-        }
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("控制台", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    Text("${logs.size} 条", style = MaterialTheme.typography.bodySmall)
-                }
+                Text("最近日志", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(modifier = Modifier.heightIn(max = 200.dp).padding(8.dp)) {
-                        if (logs.isEmpty()) {
+                    Column(modifier = Modifier.heightIn(max = 240.dp).padding(8.dp).verticalScroll(rememberScrollState())) {
+                        if (recentLogs.value.isEmpty()) {
                             Text("暂无日志", style = MaterialTheme.typography.bodySmall)
                         } else {
-                            logs.takeLast(50).forEach { log ->
-                                Text(log, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 2.dp))
+                            val fmt = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
+                            recentLogs.value.takeLast(20).forEach { entry ->
+                                Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                                    Text(
+                                        text = fmt.format(Date(entry.timestamp)),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(end = 6.dp)
+                                    )
+                                    Text(
+                                        text = "[${entry.type}] ${entry.message}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
                             }
                         }
                     }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { try { LogStore.clear() } catch (_: Throwable) {}; recentLogs.value = emptyList(); counter.longValue = 0L },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("清空日志") }
+                    OutlinedButton(
+                        onClick = { startFloatingBall(context); ballRunning.value = true },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("启动面板") }
                 }
             }
         }
@@ -266,4 +223,10 @@ fun startFloatingBall(context: Context) {
     } else {
         context.startService(intent)
     }
+}
+
+fun stopFloatingBall(context: Context) {
+    try {
+        context.stopService(Intent(context, FloatingBallService::class.java))
+    } catch (_: Throwable) {}
 }

@@ -45,11 +45,13 @@ import com.batteryopt.pro.ui.screens.FeaturesScreen
 import com.batteryopt.pro.ui.screens.HomeScreen
 import com.batteryopt.pro.ui.theme.BatteryOptimizerTheme
 import com.batteryopt.pro.utils.ConfigManager
+import com.batteryopt.pro.utils.LogStore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ConfigManager.init(applicationContext)
+        LogStore.init(applicationContext)
         setContent {
             BatteryOptimizerTheme {
                 MainScreen()
