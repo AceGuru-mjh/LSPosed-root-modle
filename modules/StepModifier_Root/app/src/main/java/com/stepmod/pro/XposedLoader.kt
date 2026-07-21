@@ -6,7 +6,10 @@ import com.stepmod.pro.models.StepConfig
 import com.stepmod.pro.utils.ConfigManager
 import com.stepmod.pro.utils.HookConfigReader
 import com.stepmod.pro.utils.LogStore
+import com.stepmod.pro.utils.AntiDetectionHelper
+import com.stepmod.pro.utils.EnvDetector
 import com.stepmod.pro.utils.LogX
+import com.stepmod.pro.utils.ModuleConflictDetector
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
@@ -50,6 +53,12 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
         LogX.i("===== APP启动: $pkg =====")
         currentPkg = pkg
+
+        LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
+        if (ModuleConflictDetector.checkConflict(lpparam)) {
+            LogX.w("检测到模块冲突，部分功能已禁用")
+            LogStore.add("warn", "模块冲突检测触发")
+        }
 
         initConfig(lpparam)
 
@@ -96,6 +105,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         } catch (e: Throwable) {
             LogX.e("模块崩溃防护: ${lpparam.packageName}", e)
             try { LogStore.add("error", "模块异常: ${e.message}") } catch (_: Exception) { }
+            AntiDetectionHelper.sleepDuringVerify()
         }
     }
 
@@ -124,6 +134,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
     }
 
     private fun initConfig(lpparam: XC_LoadPackage.LoadPackageParam) {
+        EnvDetector.detect(lpparam)
         try {
             val at = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader)
             val cat = XposedHelpers.callStaticMethod(at, "currentActivityThread")
