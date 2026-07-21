@@ -1,49 +1,34 @@
 package com.vipunlock.pro
 
 import android.app.Application
-import com.vipunlock.pro.hooks.*
+import android.util.Log
 import com.vipunlock.pro.models.VipConfig
-import com.vipunlock.pro.utils.ConfigManager
-import com.vipunlock.pro.utils.HookConfigReader
-import com.vipunlock.pro.utils.LogStore
-import com.vipunlock.pro.utils.AntiDetectionHelper
-import com.vipunlock.pro.utils.EnvDetector
-import com.vipunlock.pro.utils.LogX
-import com.vipunlock.pro.utils.ModuleConflictDetector
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
-/**
- * VipUnlocker Pro - Xposed 模块唯一入口（Root 版）
- *
- * 实现 IXposedHookLoadPackage + IXposedHookZygoteInit�?
- *
- * 工作流程�?
- *  APP启动 -> handleLoadPackage ->
- *    判断是否为目标APP ->
- *    读取全局配置 ->
- *    [应用层] 音乐/视频/阅读/工具 各APP VIP解锁（同NoRoot�?
- *    [应用�?实验] 通用VIP/去广�?绕过校验
- *    [Root] 系统属性伪装（Shizuku setprop ro.product.*�?
- *    [Root] Google License 授权返回
- *    [Root 实验] Shizuku pm grant 授权隐藏权限 / 修改 hosts 全局屏蔽
- *
- * 硬性限制：
- *  - Root 系统�?Hook 必须先检�?ShizukuHelper.isShizukuAvailable()
- *  - 系统�?Hook 失败时降级为应用�?Hook
- */
 class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
+        const val TAG = "LSP-VipUnlocker-Root"
         const val VERSION = "1.0.12"
         var currentPkg: String? = null
     }
 
+    private fun tryInvoke(className: String, method: String, loader: ClassLoader, lpparam: XC_LoadPackage.LoadPackageParam, cfg: Any) {
+        try {
+            val cls = Class.forName(className, false, loader)
+            cls.getDeclaredMethod(method, XC_LoadPackage.LoadPackageParam::class.java, cfg.javaClass)
+                .invoke(null, lpparam, cfg)
+        } catch (e: Throwable) {
+            Log.e(TAG, "$className.$method FAIL: ${e.message}")
+        }
+    }
+
     override fun initZygote(param: IXposedHookZygoteInit.StartupParam) {
-        LogX.i("VipUnlocker Pro v$VERSION 初始�?| Root �?| LSPosed 兼容")
+        Log.i(TAG, "VipUnlocker Pro v$VERSION 初始化 | Root 版 | LSPosed 兼容")
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -52,108 +37,140 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         val pkg = lpparam.packageName ?: return
         if (!isTargetApp(pkg)) return
 
-        LogX.i("=== VipUnlocker v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (EnvDetector.isLocalMode) "local" else "integrated"} ===")
+        val local = isLocalMode()
+        Log.i(TAG, "=== VipUnlocker v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (local) "local" else "integrated"} ===")
         currentPkg = pkg
 
-        LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
-        if (ModuleConflictDetector.checkConflict(lpparam)) {
-            LogX.w("检测到模块冲突，部分功能已禁用")
-            LogStore.add("warn", "模块冲突检测触�?)
+        Log.i(TAG, "环境: ${if (local) "本地模式" else "集成模式"}")
+        if (checkConflict(lpparam)) {
+            Log.w(TAG, "检测到模块冲突，部分功能已禁用")
+            addLogStore("warn", "模块冲突检测触发")
         }
 
         initConfig(lpparam)
-        if (!EnvDetector.isLocalMode) {
+        if (!local) {
             try { Thread.sleep(100) } catch (_: Throwable) { }
         }
 
         val cfg = loadConfig()
         cfg.packageName = pkg
-        LogX.i("配置: 总开�?${cfg.masterEnabled} 网易�?${cfg.netEaseVipEnabled} QQ音乐=${cfg.qqMusicVipEnabled} " +
-                "爱奇�?${cfg.iqiyiVipEnabled} B�?${cfg.biliVipEnabled} 知乎=${cfg.zhihuVipEnabled} " +
-                "[实验]通用VIP=${cfg.universalVipTryEnabled} 去广�?${cfg.removeAdsEnabled} 绕过校验=${cfg.bypassVerifyEnabled} " +
-                "[Root]系统属性伪�?${cfg.systemPropVipEnabled} License=${cfg.licenseVerifyEnabled} " +
+        Log.i(TAG, "配置: 总开关${cfg.masterEnabled} 网易=${cfg.netEaseVipEnabled} QQ音乐=${cfg.qqMusicVipEnabled} " +
+                "爱奇艺=${cfg.iqiyiVipEnabled} B站=${cfg.biliVipEnabled} 知乎=${cfg.zhihuVipEnabled} " +
+                "[实验]通用VIP=${cfg.universalVipTryEnabled} 去广告=${cfg.removeAdsEnabled} 绕过校验=${cfg.bypassVerifyEnabled} " +
+                "[Root]系统属性伪装=${cfg.systemPropVipEnabled} License=${cfg.licenseVerifyEnabled} " +
                 "[Root实验]Shizuku桥接=${cfg.shizukuVipBridgeEnabled} 全局广告屏蔽=${cfg.globalAdBlockEnabled}")
 
         if (!cfg.masterEnabled) {
-            LogX.i("总开关关闭，跳过所有Hook")
+            Log.i(TAG, "总开关关闭，跳过所有Hook")
             return
         }
 
-        // ===== 音乐�?VIP =====
-        if (cfg.netEaseVipEnabled && pkg == "com.netease.cloudmusic") NetEaseMusicVipHook.apply(lpparam, cfg)
-        if (cfg.qqMusicVipEnabled && pkg == "com.tencent.wmusic") QQMusicVipHook.apply(lpparam, cfg)
-        if (cfg.kugouVipEnabled && pkg == "com.kugou.android") UniversalVipHook.applyForKugou(lpparam, cfg)
-        if (cfg.kuwoVipEnabled && pkg == "com.kuwo.player") UniversalVipHook.applyForKuwo(lpparam, cfg)
+        val loader = lpparam.classLoader
+        val HP = "com.vipunlock.pro.hooks."
 
-        // ===== 视频�?VIP =====
-        if (cfg.iqiyiVipEnabled && pkg == "com.qiyi.video") IqiyiVipHook.apply(lpparam, cfg)
-        if (cfg.youkuVipEnabled && pkg == "com.youku.phone") UniversalVipHook.applyForYouku(lpparam, cfg)
-        if (cfg.tencentVideoVipEnabled && pkg == "com.tencent.qqlive") UniversalVipHook.applyForTencentVideo(lpparam, cfg)
-        if (cfg.biliVipEnabled && pkg == "tv.danmaku.bili") BilibiliVipHook.apply(lpparam, cfg)
+        if (cfg.netEaseVipEnabled && pkg == "com.netease.cloudmusic") tryInvoke(HP + "NetEaseMusicVipHook", "apply", loader, lpparam, cfg)
+        if (cfg.qqMusicVipEnabled && pkg == "com.tencent.wmusic") tryInvoke(HP + "QQMusicVipHook", "apply", loader, lpparam, cfg)
+        if (cfg.kugouVipEnabled && pkg == "com.kugou.android") tryInvoke(HP + "UniversalVipHook", "applyForKugou", loader, lpparam, cfg)
+        if (cfg.kuwoVipEnabled && pkg == "com.kuwo.player") tryInvoke(HP + "UniversalVipHook", "applyForKuwo", loader, lpparam, cfg)
 
-        // ===== 阅读/资讯�?VIP =====
-        if (cfg.ximalayaVipEnabled && pkg == "com.ximalaya.ting.android") UniversalVipHook.applyForXimalaya(lpparam, cfg)
-        if (cfg.toutiaoVipEnabled && pkg == "com.ss.android.article.news") UniversalVipHook.applyForToutiao(lpparam, cfg)
-        if (cfg.zhihuVipEnabled && pkg == "com.zhihu.android") UniversalVipHook.applyForZhihu(lpparam, cfg)
+        if (cfg.iqiyiVipEnabled && pkg == "com.qiyi.video") tryInvoke(HP + "IqiyiVipHook", "apply", loader, lpparam, cfg)
+        if (cfg.youkuVipEnabled && pkg == "com.youku.phone") tryInvoke(HP + "UniversalVipHook", "applyForYouku", loader, lpparam, cfg)
+        if (cfg.tencentVideoVipEnabled && pkg == "com.tencent.qqlive") tryInvoke(HP + "UniversalVipHook", "applyForTencentVideo", loader, lpparam, cfg)
+        if (cfg.biliVipEnabled && pkg == "tv.danmaku.bili") tryInvoke(HP + "BilibiliVipHook", "apply", loader, lpparam, cfg)
 
-        // ===== 工具�?VIP =====
-        if (cfg.baiduNetdiskVipEnabled && pkg == "com.baidu.netdisk") UniversalVipHook.applyForBaiduNetdisk(lpparam, cfg)
-        if (cfg.wpsVipEnabled && pkg == "com.wps.moffice_eng") UniversalVipHook.applyForWps(lpparam, cfg)
-        if (cfg.wereadVipEnabled && pkg == "com.tencent.weread") UniversalVipHook.applyForWeread(lpparam, cfg)
+        if (cfg.ximalayaVipEnabled && pkg == "com.ximalaya.ting.android") tryInvoke(HP + "UniversalVipHook", "applyForXimalaya", loader, lpparam, cfg)
+        if (cfg.toutiaoVipEnabled && pkg == "com.ss.android.article.news") tryInvoke(HP + "UniversalVipHook", "applyForToutiao", loader, lpparam, cfg)
+        if (cfg.zhihuVipEnabled && pkg == "com.zhihu.android") tryInvoke(HP + "UniversalVipHook", "applyForZhihu", loader, lpparam, cfg)
 
-        // ===== 应用层实验性（跨APP通用�?=====
-        if (cfg.universalVipTryEnabled) UniversalVipHook.applyForCommon(lpparam, cfg)
-        if (cfg.removeAdsEnabled) RemoveAdsHook.apply(lpparam, cfg)
-        if (cfg.bypassVerifyEnabled) BypassVerifyHook.apply(lpparam, cfg)
+        if (cfg.baiduNetdiskVipEnabled && pkg == "com.baidu.netdisk") tryInvoke(HP + "UniversalVipHook", "applyForBaiduNetdisk", loader, lpparam, cfg)
+        if (cfg.wpsVipEnabled && pkg == "com.wps.moffice_eng") tryInvoke(HP + "UniversalVipHook", "applyForWps", loader, lpparam, cfg)
+        if (cfg.wereadVipEnabled && pkg == "com.tencent.weread") tryInvoke(HP + "UniversalVipHook", "applyForWeread", loader, lpparam, cfg)
 
-        // ===== Root 专属：系统级 Hook（需 Shizuku�?=====
-        if (cfg.systemPropVipEnabled) SystemPropVipHook.apply(lpparam, cfg)
-        if (cfg.licenseVerifyEnabled) LicenseVerifyHook.apply(lpparam, cfg)
+        if (cfg.universalVipTryEnabled) tryInvoke(HP + "UniversalVipHook", "applyForCommon", loader, lpparam, cfg)
+        if (cfg.removeAdsEnabled) tryInvoke(HP + "RemoveAdsHook", "apply", loader, lpparam, cfg)
+        if (cfg.bypassVerifyEnabled) tryInvoke(HP + "BypassVerifyHook", "apply", loader, lpparam, cfg)
 
-        // ===== Root 实验�?=====
-        if (cfg.shizukuVipBridgeEnabled) ShizukuVipBridgeHook.apply(lpparam, cfg)
-        if (cfg.globalAdBlockEnabled) GlobalAdBlockHook.apply(lpparam, cfg)
+        if (cfg.systemPropVipEnabled) tryInvoke(HP + "SystemPropVipHook", "apply", loader, lpparam, cfg)
+        if (cfg.licenseVerifyEnabled) tryInvoke(HP + "LicenseVerifyHook", "apply", loader, lpparam, cfg)
 
-        // ===== [Task24] 系统级增�?=====
-        if (cfg.persistentVipEnabled) PersistentVipHook.apply(lpparam, cfg)
+        if (cfg.shizukuVipBridgeEnabled) tryInvoke(HP + "ShizukuVipBridgeHook", "apply", loader, lpparam, cfg)
+        if (cfg.globalAdBlockEnabled) tryInvoke(HP + "GlobalAdBlockHook", "apply", loader, lpparam, cfg)
+
+        if (cfg.persistentVipEnabled) tryInvoke(HP + "PersistentVipHook", "apply", loader, lpparam, cfg)
 
         hookAppLifecycle(lpparam)
-        LogX.i("===== 全部Hook就绪: $pkg =====")
+        Log.i(TAG, "===== 全部Hook就绪: $pkg =====")
         } catch (e: Throwable) {
-            LogX.e("模块崩溃防护: ${lpparam.packageName}", e)
-            try { LogStore.add("error", "模块异常: ${e.message}") } catch (_: Exception) { }
-            AntiDetectionHelper.sleepDuringVerify()
+            Log.e(TAG, "模块崩溃防护: ${lpparam.packageName}", e)
+            try { addLogStore("error", "模块异常: ${e.message}") } catch (_: Exception) { }
+            try {
+                Class.forName("com.vipunlock.pro.utils.AntiDetectionHelper")
+                    .getDeclaredMethod("sleepDuringVerify").invoke(null)
+            } catch (_: Throwable) {}
         }
     }
 
-    /** 目标APP包名白名单（�?arrays.xml xposed_scope 一致） */
     private fun isTargetApp(pkg: String) = pkg in listOf(
-        // 音乐�?
         "com.netease.cloudmusic", "com.tencent.wmusic", "com.kugou.android", "com.kuwo.player",
-        // 视频�?
         "com.qiyi.video", "com.youku.phone", "com.tencent.qqlive", "tv.danmaku.bili",
-        // 阅读/资讯�?
         "com.ximalaya.ting.android", "com.ss.android.article.news", "com.zhihu.android",
-        // 工具�?
         "com.baidu.netdisk", "com.wps.moffice_eng", "com.tencent.weread",
-        // 出行/支付�?
         "com.sdu.didi.psnger", "com.eg.android.AlipayGphone"
     )
 
-    /** 读取配置：优先XSharedPreferences，回退Context */
+    private fun isLocalMode(): Boolean {
+        return try {
+            Class.forName("com.vipunlock.pro.utils.EnvDetector")
+                .getDeclaredMethod("isLocalMode").invoke(null) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun checkConflict(lpparam: XC_LoadPackage.LoadPackageParam): Boolean {
+        return try {
+            Class.forName("com.vipunlock.pro.utils.ModuleConflictDetector")
+                .getDeclaredMethod("checkConflict", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun addLogStore(level: String, msg: String) {
+        try {
+            Class.forName("com.vipunlock.pro.utils.LogStore")
+                .getDeclaredMethod("add", String::class.java, String::class.java)
+                .invoke(null, level, msg)
+        } catch (_: Throwable) {}
+    }
+
     private fun loadConfig(): VipConfig {
-        HookConfigReader.readGlobal()?.let { return it }
-        return try { ConfigManager.getGlobalConfig() } catch (_: Throwable) { VipConfig(packageName = "global") }
+        try {
+            Class.forName("com.vipunlock.pro.utils.HookConfigReader")
+                .getDeclaredMethod("readGlobal").invoke(null)?.let { return it as VipConfig }
+        } catch (_: Throwable) {}
+        return try {
+            Class.forName("com.vipunlock.pro.utils.ConfigManager")
+                .getDeclaredMethod("getGlobalConfig").invoke(null) as? VipConfig ?: VipConfig(packageName = "global")
+        } catch (_: Throwable) { VipConfig(packageName = "global") }
     }
 
     private fun initConfig(lpparam: XC_LoadPackage.LoadPackageParam) {
-        EnvDetector.detect(lpparam)
+        try {
+            Class.forName("com.vipunlock.pro.utils.EnvDetector")
+                .getDeclaredMethod("detect", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam)
+        } catch (_: Throwable) {}
         try {
             val at = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader)
             val cat = XposedHelpers.callStaticMethod(at, "currentActivityThread")
             val app = XposedHelpers.callMethod(cat, "getApplication") as? Application
-            if (app != null) { ConfigManager.init(app); LogStore.init(app) }
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+            if (app != null) {
+                Class.forName("com.vipunlock.pro.utils.ConfigManager")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+                Class.forName("com.vipunlock.pro.utils.LogStore")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+            }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 
     private fun hookAppLifecycle(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -163,9 +180,16 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(p: MethodHookParam) {
                         val app = p.thisObject as? Application ?: return
-                        try { ConfigManager.init(app); LogStore.init(app) } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+                        try {
+                            Class.forName("com.vipunlock.pro.utils.ConfigManager")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                            Class.forName("com.vipunlock.pro.utils.LogStore")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
                     }
                 })
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 }

@@ -1,61 +1,34 @@
 package com.gameunlocker.pro
 
 import android.app.Application
-import com.gameunlocker.pro.hooks.*
+import android.util.Log
 import com.gameunlocker.pro.models.GameConfig
-import com.gameunlocker.pro.utils.ConfigManager
-import com.gameunlocker.pro.utils.HookConfigReader
-import com.gameunlocker.pro.utils.LogStore
-import com.gameunlocker.pro.utils.AntiDetectionHelper
-import com.gameunlocker.pro.utils.EnvDetector
-import com.gameunlocker.pro.utils.LogX
-import com.gameunlocker.pro.utils.ModuleConflictDetector
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
-/**
- * GameUnlocker Pro - Xposed 模块唯一入口（Root 版）
- *
- * 实现 IXposedHookLoadPackage + IXposedHookZygoteInit�?
- *
- * 配置读取策略�?
- *  1. 优先 XSharedPreferences（LSPosed 模式，跨进程直读模块 prefs�?
- *  2. 回退 Context.getSharedPreferences（LSPatch 本地模式，同进程�?
- *
- * 工作流程�?
- *  游戏启动 -> handleLoadPackage ->
- *    判断是否为目标游�?->
- *    读取全局配置 ->
- *    [1] 环境隐藏(最先执行，防检�?
- *    [2] 机型伪装(Build属�?
- *    [3] 帧率解锁(Display/Surface/引擎)
- *    [4] 温控屏蔽(系统级，Hook PowerManager/ThermalService)
- *    [5] GPU调度(系统级，Hook EGL/Choreographer)
- *    [6] 进程优化(线程优先�?+ Shizuku 冻结后台)
- *    [7] 分辨率伪�?可�?
- *    [8] Shizuku系统属性修�?setprop 刷新�?
- *    [实验] 触摸采样/网络延迟/音频优先/内存整理
- *    [实验] 游戏模式激�?CPU 大核亲和性（需 Shizuku�?
- *
- * 系统级能力（需 Shizuku adb 级授权）�?
- *  - 温控屏蔽 / GPU 调频
- *  - setprop 修改 ro.surface_flinger.* 刷新率属�?
- *  - am force-stop 冻结后台进程
- *  - cmd game_mode / settings put global game_mode
- *  - �?/sys/devices/system/cpu/cpuN/cpufreq 节点
- */
 class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
+        const val TAG = "LSP-GameUnlocker-Root"
         const val VERSION = "1.0.12"
         var currentPkg: String? = null
     }
 
+    private fun tryInvoke(className: String, method: String, loader: ClassLoader, lpparam: XC_LoadPackage.LoadPackageParam, cfg: Any) {
+        try {
+            val cls = Class.forName(className, false, loader)
+            cls.getDeclaredMethod(method, XC_LoadPackage.LoadPackageParam::class.java, cfg.javaClass)
+                .invoke(null, lpparam, cfg)
+        } catch (e: Throwable) {
+            Log.e(TAG, "$className.$method FAIL: ${e.message}")
+        }
+    }
+
     override fun initZygote(param: IXposedHookZygoteInit.StartupParam) {
-        LogX.i("GameUnlocker Pro v$VERSION 初始�?| LSPatch/LSPosed 兼容 | 系统�?Hook 已就�?)
+        Log.i(TAG, "GameUnlocker Pro v$VERSION 初始化 | LSPatch/LSPosed 兼容 | 系统级 Hook 已就绪")
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -64,22 +37,23 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         val pkg = lpparam.packageName ?: return
         if (!isTargetGame(pkg)) return
 
-        LogX.i("=== GameUnlockerPro v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (EnvDetector.isLocalMode) "local" else "integrated"} ===")
+        val local = isLocalMode()
+        Log.i(TAG, "=== GameUnlockerPro v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (local) "local" else "integrated"} ===")
         currentPkg = pkg
 
-        LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
-        if (ModuleConflictDetector.checkConflict(lpparam)) {
-            LogX.w("检测到模块冲突，部分功能已禁用")
-            LogStore.add("warn", "模块冲突检测触�?)
+        Log.i(TAG, "环境: ${if (local) "本地模式" else "集成模式"}")
+        if (checkConflict(lpparam)) {
+            Log.w(TAG, "检测到模块冲突，部分功能已禁用")
+            addLogStore("warn", "模块冲突检测触发")
         }
 
         initConfig(lpparam)
-        if (!EnvDetector.isLocalMode) {
+        if (!local) {
             try { Thread.sleep(100) } catch (_: Throwable) { }
         }
 
         val cfg = loadConfig()
-        LogX.i("配置: 总开�?${cfg.masterEnabled} 伪装=${cfg.deviceSpoofEnabled} " +
+        Log.i(TAG, "配置: 总开关${cfg.masterEnabled} 伪装=${cfg.deviceSpoofEnabled} " +
                 "帧率=${cfg.targetFps}fps 隐藏=${cfg.detectionHideEnabled} " +
                 "温控=${cfg.thermalBypassEnabled} GPU=${cfg.gpuOptimizeEnabled} " +
                 "Shizuku=${cfg.shizukuBridgeEnabled} " +
@@ -88,87 +62,120 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 "游戏模式=${cfg.gameModeActivationEnabled} CPU亲和=${cfg.cpuBigCoreAffinityEnabled}")
 
         if (!cfg.masterEnabled) {
-            LogX.i("总开关关闭，跳过所�?Hook")
+            Log.i(TAG, "总开关关闭，跳过所有 Hook")
             return
         }
 
-        // ===== [1] 环境隐藏（最先执行，防检测）=====
-        if (cfg.detectionHideEnabled) GameDetectionHideHook.apply(lpparam, cfg)
+        val loader = lpparam.classLoader
+        val HP = "com.gameunlocker.pro.hooks."
 
-        // ===== [2] 机型伪装 =====
-        if (cfg.deviceSpoofEnabled) DeviceSpoofHook.apply(lpparam, cfg)
+        if (cfg.detectionHideEnabled) tryInvoke(HP + "GameDetectionHideHook", "apply", loader, lpparam, cfg)
 
-        // ===== [3] 帧率解锁 =====
-        if (cfg.frameRateUnlockEnabled) FrameRateUnlockHook.apply(lpparam, cfg)
+        if (cfg.deviceSpoofEnabled) tryInvoke(HP + "DeviceSpoofHook", "apply", loader, lpparam, cfg)
 
-        // ===== [4] 温控屏蔽（系统级�?====
-        if (cfg.thermalBypassEnabled) ThermalBypassHook.apply(lpparam, cfg)
+        if (cfg.frameRateUnlockEnabled) tryInvoke(HP + "FrameRateUnlockHook", "apply", loader, lpparam, cfg)
 
-        // ===== [5] GPU 调度优化（系统级�?====
-        if (cfg.gpuOptimizeEnabled) GPUSchedulerHook.apply(lpparam, cfg)
+        if (cfg.thermalBypassEnabled) tryInvoke(HP + "ThermalBypassHook", "apply", loader, lpparam, cfg)
 
-        // ===== [6] 进程性能优化 =====
-        if (cfg.processOptimizeEnabled) ProcessOptimizerHook.apply(lpparam, cfg)
+        if (cfg.gpuOptimizeEnabled) tryInvoke(HP + "GPUSchedulerHook", "apply", loader, lpparam, cfg)
 
-        // ===== [7] 分辨率伪装（可选）=====
-        if (cfg.resolutionSpoofEnabled) ResolutionSpoofHook.apply(lpparam, cfg)
+        if (cfg.processOptimizeEnabled) tryInvoke(HP + "ProcessOptimizerHook", "apply", loader, lpparam, cfg)
 
-        // ===== [8] Shizuku 系统属性修改（系统级）=====
-        if (cfg.shizukuBridgeEnabled) ShizukuBridgeHook.apply(lpparam, cfg)
+        if (cfg.resolutionSpoofEnabled) tryInvoke(HP + "ResolutionSpoofHook", "apply", loader, lpparam, cfg)
 
-        // ===== 实验�?- 应用�?=====
-        if (cfg.touchSamplingBoostEnabled) TouchSamplingBoostHook.apply(lpparam, cfg)
-        if (cfg.networkLatencyOptEnabled) NetworkLatencyOptHook.apply(lpparam, cfg)
-        if (cfg.audioPriorityBoostEnabled) AudioPriorityBoostHook.apply(lpparam, cfg)
-        if (cfg.memoryDefragEnabled) MemoryDefragHook.apply(lpparam, cfg)
+        if (cfg.shizukuBridgeEnabled) tryInvoke(HP + "ShizukuBridgeHook", "apply", loader, lpparam, cfg)
 
-        // ===== 实验�?- 系统�?=====
-        if (cfg.gameModeActivationEnabled) GameModeActivationHook.apply(lpparam, cfg)
-        if (cfg.cpuBigCoreAffinityEnabled) CpuBigCoreAffinityHook.apply(lpparam, cfg)
+        if (cfg.touchSamplingBoostEnabled) tryInvoke(HP + "TouchSamplingBoostHook", "apply", loader, lpparam, cfg)
+        if (cfg.networkLatencyOptEnabled) tryInvoke(HP + "NetworkLatencyOptHook", "apply", loader, lpparam, cfg)
+        if (cfg.audioPriorityBoostEnabled) tryInvoke(HP + "AudioPriorityBoostHook", "apply", loader, lpparam, cfg)
+        if (cfg.memoryDefragEnabled) tryInvoke(HP + "MemoryDefragHook", "apply", loader, lpparam, cfg)
 
-        // ===== v1.0.11 Root 系统级增�?=====
-        if (cfg.kernelTunerEnabled) KernelTunerHook.apply(lpparam, cfg)
-        if (cfg.gpuFreqLockEnabled) GpuFreqLockHook.apply(lpparam, cfg)
+        if (cfg.gameModeActivationEnabled) tryInvoke(HP + "GameModeActivationHook", "apply", loader, lpparam, cfg)
+        if (cfg.cpuBigCoreAffinityEnabled) tryInvoke(HP + "CpuBigCoreAffinityHook", "apply", loader, lpparam, cfg)
+
+        if (cfg.kernelTunerEnabled) tryInvoke(HP + "KernelTunerHook", "apply", loader, lpparam, cfg)
+        if (cfg.gpuFreqLockEnabled) tryInvoke(HP + "GpuFreqLockHook", "apply", loader, lpparam, cfg)
 
         hookAppLifecycle(lpparam)
-        LogX.i("===== 全部 Hook 就绪: $pkg =====")
+        Log.i(TAG, "===== 全部 Hook 就绪: $pkg =====")
         } catch (e: Throwable) {
-            LogX.e("模块崩溃防护: ${lpparam.packageName}", e)
-            try { LogStore.add("error", "模块异常: ${e.message}") } catch (_: Exception) { }
-            AntiDetectionHelper.sleepDuringVerify()
+            Log.e(TAG, "模块崩溃防护: ${lpparam.packageName}", e)
+            try { addLogStore("error", "模块异常: ${e.message}") } catch (_: Exception) { }
+            try {
+                Class.forName("com.gameunlocker.pro.utils.AntiDetectionHelper")
+                    .getDeclaredMethod("sleepDuringVerify").invoke(null)
+            } catch (_: Throwable) {}
         }
     }
 
-    /** 目标游戏包名白名�?*/
     private fun isTargetGame(pkg: String) = pkg in listOf(
-        "com.tencent.tmgp.sgame",                  // 王者荣耀
-        "com.miHoYo.Yuanshen",                     // 原神国内�?
-        "com.miHoYo.GenshinImpact",                // 原神国际�?
-        "com.tencent.tmgp.pubgmhd",                // 和平精英
-        "com.tencent.ig",                          // PUBG Mobile
-        "com.miHoYo.hkrpg",                        // 崩坏星穹铁道
-        "com.tencent.tmgp.cod",                    // 使命召唤国内�?
-        "com.activision.callofduty.shooter",       // CODM 国际�?
-        "com.tencent.tmgp.gnyx",                   // 高能英雄
-        "com.gameblackmyth.mobile",                // 黑神话手�?
-        "com.miHoYo.ZenlessZoneZero",              // 绝区�?
-        "com.kurogame.kjq"                         // 鸣潮
+        "com.tencent.tmgp.sgame",
+        "com.miHoYo.Yuanshen",
+        "com.miHoYo.GenshinImpact",
+        "com.tencent.tmgp.pubgmhd",
+        "com.tencent.ig",
+        "com.miHoYo.hkrpg",
+        "com.tencent.tmgp.cod",
+        "com.activision.callofduty.shooter",
+        "com.tencent.tmgp.gnyx",
+        "com.gameblackmyth.mobile",
+        "com.miHoYo.ZenlessZoneZero",
+        "com.kurogame.kjq"
     )
 
-    /** 读取配置：优�?XSharedPreferences，回退 Context */
+    private fun isLocalMode(): Boolean {
+        return try {
+            Class.forName("com.gameunlocker.pro.utils.EnvDetector")
+                .getDeclaredMethod("isLocalMode").invoke(null) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun checkConflict(lpparam: XC_LoadPackage.LoadPackageParam): Boolean {
+        return try {
+            Class.forName("com.gameunlocker.pro.utils.ModuleConflictDetector")
+                .getDeclaredMethod("checkConflict", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun addLogStore(level: String, msg: String) {
+        try {
+            Class.forName("com.gameunlocker.pro.utils.LogStore")
+                .getDeclaredMethod("add", String::class.java, String::class.java)
+                .invoke(null, level, msg)
+        } catch (_: Throwable) {}
+    }
+
     private fun loadConfig(): GameConfig {
-        HookConfigReader.readGlobal()?.let { return it }
-        return try { ConfigManager.getGlobalConfig() } catch (_: Throwable) { GameConfig(packageName = "global") }
+        try {
+            Class.forName("com.gameunlocker.pro.utils.HookConfigReader")
+                .getDeclaredMethod("readGlobal").invoke(null)?.let { return it as GameConfig }
+        } catch (_: Throwable) {}
+        return try {
+            Class.forName("com.gameunlocker.pro.utils.ConfigManager")
+                .getDeclaredMethod("getGlobalConfig").invoke(null) as? GameConfig ?: GameConfig(packageName = "global")
+        } catch (_: Throwable) { GameConfig(packageName = "global") }
     }
 
     private fun initConfig(lpparam: XC_LoadPackage.LoadPackageParam) {
-        EnvDetector.detect(lpparam)
+        try {
+            Class.forName("com.gameunlocker.pro.utils.EnvDetector")
+                .getDeclaredMethod("detect", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam)
+        } catch (_: Throwable) {}
         try {
             val at = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader)
             val cat = XposedHelpers.callStaticMethod(at, "currentActivityThread")
             val app = XposedHelpers.callMethod(cat, "getApplication") as? Application
-            if (app != null) { ConfigManager.init(app); LogStore.init(app) }
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+            if (app != null) {
+                Class.forName("com.gameunlocker.pro.utils.ConfigManager")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+                Class.forName("com.gameunlocker.pro.utils.LogStore")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+            }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 
     private fun hookAppLifecycle(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -178,9 +185,16 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(p: MethodHookParam) {
                         val app = p.thisObject as? Application ?: return
-                        try { ConfigManager.init(app); LogStore.init(app) } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+                        try {
+                            Class.forName("com.gameunlocker.pro.utils.ConfigManager")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                            Class.forName("com.gameunlocker.pro.utils.LogStore")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
                     }
                 })
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 }

@@ -1,50 +1,34 @@
 package com.batteryopt.pro
 
 import android.app.Application
-import com.batteryopt.pro.hooks.*
+import android.util.Log
 import com.batteryopt.pro.models.BatteryConfig
-import com.batteryopt.pro.utils.ConfigManager
-import com.batteryopt.pro.utils.HookConfigReader
-import com.batteryopt.pro.utils.LogStore
-import com.batteryopt.pro.utils.AntiDetectionHelper
-import com.batteryopt.pro.utils.EnvDetector
-import com.batteryopt.pro.utils.LogX
-import com.batteryopt.pro.utils.ModuleConflictDetector
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
-/**
- * BatteryOptimizer Pro - Xposed 模块唯一入口（Root 版）
- *
- * 实现 IXposedHookLoadPackage + IXposedHookZygoteInit�?
- *
- * 工作流程�?
- *  APP启动 -> handleLoadPackage ->
- *    判断是否为目标APP ->
- *    读取全局配置 ->
- *    [A] 应用�?Hook�?个）：WakeLock / Alarm / Sync / Job / Location / Animation / Sensor
- *    [A-实验] 蓝牙扫描 / 相机阻断 / 振动�?
- *    [B] 系统�?Hook（需 Shizuku）：
- *        SystemDoze / BackgroundFreeze / CpuGovernor / GreenifyBridge / ShizukuBridge
- *    [B-实验] LowPowerModeAuto / BatteryStatsReset
- *
- * 系统�?Hook 注意事项�?
- *  - 必须先检�?Shizuku 可用性（ShizukuBridgeHook 统一检测）
- *  - 屏幕开关广播由各系统级 Hook 自行注册监听
- *  - 系统 Doze/冻结/CPU 仅在屏幕关闭时触�?
- */
 class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
+        const val TAG = "LSP-BatteryOpt-Root"
         const val VERSION = "1.0.12"
         var currentPkg: String? = null
     }
 
+    private fun tryInvoke(className: String, method: String, loader: ClassLoader, lpparam: XC_LoadPackage.LoadPackageParam, cfg: Any) {
+        try {
+            val cls = Class.forName(className, false, loader)
+            cls.getDeclaredMethod(method, XC_LoadPackage.LoadPackageParam::class.java, cfg.javaClass)
+                .invoke(null, lpparam, cfg)
+        } catch (e: Throwable) {
+            Log.e(TAG, "$className.$method FAIL: ${e.message}")
+        }
+    }
+
     override fun initZygote(param: IXposedHookZygoteInit.StartupParam) {
-        LogX.i("BatteryOptimizer Pro v$VERSION 初始�?| LSPosed + Shizuku 模式")
+        Log.i(TAG, "BatteryOptimizer Pro v$VERSION 初始化 | LSPosed + Shizuku 模式")
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -53,22 +37,23 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         val pkg = lpparam.packageName ?: return
         if (!isTargetApp(pkg)) return
 
-        LogX.i("=== BatteryOptimizer v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (EnvDetector.isLocalMode) "local" else "integrated"} ===")
+        val local = isLocalMode()
+        Log.i(TAG, "=== BatteryOptimizer v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (local) "local" else "integrated"} ===")
         currentPkg = pkg
 
-        LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
-        if (ModuleConflictDetector.checkConflict(lpparam)) {
-            LogX.w("检测到模块冲突，部分功能已禁用")
-            LogStore.add("warn", "模块冲突检测触�?)
+        Log.i(TAG, "环境: ${if (local) "本地模式" else "集成模式"}")
+        if (checkConflict(lpparam)) {
+            Log.w(TAG, "检测到模块冲突，部分功能已禁用")
+            addLogStore("warn", "模块冲突检测触发")
         }
 
         initConfig(lpparam)
-        if (!EnvDetector.isLocalMode) {
+        if (!local) {
             try { Thread.sleep(100) } catch (_: Throwable) { }
         }
 
         val cfg = loadConfig()
-        LogX.i("配置: 总开�?${cfg.masterEnabled} wakelock=${cfg.wakeLockEnabled} " +
+        Log.i(TAG, "配置: 总开关${cfg.masterEnabled} wakelock=${cfg.wakeLockEnabled} " +
                 "alarm=${cfg.alarmEnabled} sync=${cfg.syncEnabled} job=${cfg.jobEnabled} " +
                 "location=${cfg.locationEnabled} anim=${cfg.animationEnabled} " +
                 "sensor=${cfg.sensorEnabled} " +
@@ -79,50 +64,50 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 "[实验-系统]lowpower=${cfg.lowPowerModeAutoEnabled} batreset=${cfg.batteryStatsResetEnabled}")
 
         if (!cfg.masterEnabled) {
-            LogX.i("总开关关闭，跳过所有Hook")
+            Log.i(TAG, "总开关关闭，跳过所有Hook")
             return
         }
 
-        // ===== [A] 应用�?Hook =====
-        if (cfg.wakeLockEnabled) WakeLockHook.apply(lpparam, cfg)
-        if (cfg.alarmEnabled) AlarmOptimizerHook.apply(lpparam, cfg)
-        if (cfg.syncEnabled) BackgroundSyncHook.apply(lpparam, cfg)
-        if (cfg.jobEnabled) JobSchedulerHook.apply(lpparam, cfg)
-        if (cfg.locationEnabled) LocationOptHook.apply(lpparam, cfg)
-        if (cfg.animationEnabled) AnimationOptHook.apply(lpparam, cfg)
-        if (cfg.sensorEnabled) SensorOptHook.apply(lpparam, cfg)
+        val loader = lpparam.classLoader
+        val HP = "com.batteryopt.pro.hooks."
 
-        // ===== [A-实验] 应用层实验�?=====
-        if (cfg.bluetoothScanThrottleEnabled) BluetoothScanThrottleHook.apply(lpparam, cfg)
-        if (cfg.cameraBackgroundBlockEnabled) CameraBackgroundBlockHook.apply(lpparam, cfg)
-        if (cfg.vibratorThrottleEnabled) VibratorThrottleHook.apply(lpparam, cfg)
+        if (cfg.wakeLockEnabled) tryInvoke(HP + "WakeLockHook", "apply", loader, lpparam, cfg)
+        if (cfg.alarmEnabled) tryInvoke(HP + "AlarmOptimizerHook", "apply", loader, lpparam, cfg)
+        if (cfg.syncEnabled) tryInvoke(HP + "BackgroundSyncHook", "apply", loader, lpparam, cfg)
+        if (cfg.jobEnabled) tryInvoke(HP + "JobSchedulerHook", "apply", loader, lpparam, cfg)
+        if (cfg.locationEnabled) tryInvoke(HP + "LocationOptHook", "apply", loader, lpparam, cfg)
+        if (cfg.animationEnabled) tryInvoke(HP + "AnimationOptHook", "apply", loader, lpparam, cfg)
+        if (cfg.sensorEnabled) tryInvoke(HP + "SensorOptHook", "apply", loader, lpparam, cfg)
 
-        // ===== [B] 系统�?Hook（需 Shizuku�?====
-        ShizukuBridgeHook.apply(lpparam, cfg)
+        if (cfg.bluetoothScanThrottleEnabled) tryInvoke(HP + "BluetoothScanThrottleHook", "apply", loader, lpparam, cfg)
+        if (cfg.cameraBackgroundBlockEnabled) tryInvoke(HP + "CameraBackgroundBlockHook", "apply", loader, lpparam, cfg)
+        if (cfg.vibratorThrottleEnabled) tryInvoke(HP + "VibratorThrottleHook", "apply", loader, lpparam, cfg)
 
-        if (cfg.dozeEnabled) SystemDozeHook.apply(lpparam, cfg)
-        if (cfg.freezeEnabled) BackgroundFreezeHook.apply(lpparam, cfg)
-        if (cfg.cpuGovernorEnabled) CpuGovernorHook.apply(lpparam, cfg)
-        if (cfg.greenifyEnabled) GreenifyBridgeHook.apply(lpparam, cfg)
+        tryInvoke(HP + "ShizukuBridgeHook", "apply", loader, lpparam, cfg)
 
-        // ===== [B-实验] 系统级实验�?=====
-        if (cfg.lowPowerModeAutoEnabled) LowPowerModeAutoHook.apply(lpparam, cfg)
-        if (cfg.batteryStatsResetEnabled) BatteryStatsResetHook.apply(lpparam, cfg)
+        if (cfg.dozeEnabled) tryInvoke(HP + "SystemDozeHook", "apply", loader, lpparam, cfg)
+        if (cfg.freezeEnabled) tryInvoke(HP + "BackgroundFreezeHook", "apply", loader, lpparam, cfg)
+        if (cfg.cpuGovernorEnabled) tryInvoke(HP + "CpuGovernorHook", "apply", loader, lpparam, cfg)
+        if (cfg.greenifyEnabled) tryInvoke(HP + "GreenifyBridgeHook", "apply", loader, lpparam, cfg)
 
-        // ===== [Task24] 系统级增�?=====
-        if (cfg.zramOptimizerEnabled) ZramOptimizerHook.apply(lpparam, cfg)
-        if (cfg.kernelWakeupEnabled) KernelWakeupHook.apply(lpparam, cfg)
+        if (cfg.lowPowerModeAutoEnabled) tryInvoke(HP + "LowPowerModeAutoHook", "apply", loader, lpparam, cfg)
+        if (cfg.batteryStatsResetEnabled) tryInvoke(HP + "BatteryStatsResetHook", "apply", loader, lpparam, cfg)
+
+        if (cfg.zramOptimizerEnabled) tryInvoke(HP + "ZramOptimizerHook", "apply", loader, lpparam, cfg)
+        if (cfg.kernelWakeupEnabled) tryInvoke(HP + "KernelWakeupHook", "apply", loader, lpparam, cfg)
 
         hookAppLifecycle(lpparam)
-        LogX.i("===== 全部Hook就绪: $pkg =====")
+        Log.i(TAG, "===== 全部Hook就绪: $pkg =====")
         } catch (e: Throwable) {
-            LogX.e("模块崩溃防护: ${lpparam.packageName}", e)
-            try { LogStore.add("error", "模块异常: ${e.message}") } catch (_: Exception) { }
-            AntiDetectionHelper.sleepDuringVerify()
+            Log.e(TAG, "模块崩溃防护: ${lpparam.packageName}", e)
+            try { addLogStore("error", "模块异常: ${e.message}") } catch (_: Exception) { }
+            try {
+                Class.forName("com.batteryopt.pro.utils.AntiDetectionHelper")
+                    .getDeclaredMethod("sleepDuringVerify").invoke(null)
+            } catch (_: Throwable) {}
         }
     }
 
-    /** 目标耗电大户 APP 包名白名�?*/
     private fun isTargetApp(pkg: String) = pkg in listOf(
         "com.tencent.mm",
         "com.tencent.mobileqq",
@@ -140,19 +125,59 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         "com.tencent.androidqqmail"
     )
 
+    private fun isLocalMode(): Boolean {
+        return try {
+            Class.forName("com.batteryopt.pro.utils.EnvDetector")
+                .getDeclaredMethod("isLocalMode").invoke(null) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun checkConflict(lpparam: XC_LoadPackage.LoadPackageParam): Boolean {
+        return try {
+            Class.forName("com.batteryopt.pro.utils.ModuleConflictDetector")
+                .getDeclaredMethod("checkConflict", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun addLogStore(level: String, msg: String) {
+        try {
+            Class.forName("com.batteryopt.pro.utils.LogStore")
+                .getDeclaredMethod("add", String::class.java, String::class.java)
+                .invoke(null, level, msg)
+        } catch (_: Throwable) {}
+    }
+
     private fun loadConfig(): BatteryConfig {
-        HookConfigReader.readGlobal()?.let { return it }
-        return try { ConfigManager.getGlobalConfig() } catch (_: Throwable) { BatteryConfig(packageName = "global") }
+        try {
+            Class.forName("com.batteryopt.pro.utils.HookConfigReader")
+                .getDeclaredMethod("readGlobal").invoke(null)?.let { return it as BatteryConfig }
+        } catch (_: Throwable) {}
+        return try {
+            Class.forName("com.batteryopt.pro.utils.ConfigManager")
+                .getDeclaredMethod("getGlobalConfig").invoke(null) as? BatteryConfig ?: BatteryConfig(packageName = "global")
+        } catch (_: Throwable) { BatteryConfig(packageName = "global") }
     }
 
     private fun initConfig(lpparam: XC_LoadPackage.LoadPackageParam) {
-        EnvDetector.detect(lpparam)
+        try {
+            Class.forName("com.batteryopt.pro.utils.EnvDetector")
+                .getDeclaredMethod("detect", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam)
+        } catch (_: Throwable) {}
         try {
             val at = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader)
             val cat = XposedHelpers.callStaticMethod(at, "currentActivityThread")
             val app = XposedHelpers.callMethod(cat, "getApplication") as? Application
-            if (app != null) { ConfigManager.init(app); LogStore.init(app) }
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+            if (app != null) {
+                Class.forName("com.batteryopt.pro.utils.ConfigManager")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+                Class.forName("com.batteryopt.pro.utils.LogStore")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+            }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 
     private fun hookAppLifecycle(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -162,9 +187,16 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(p: MethodHookParam) {
                         val app = p.thisObject as? Application ?: return
-                        try { ConfigManager.init(app); LogStore.init(app) } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+                        try {
+                            Class.forName("com.batteryopt.pro.utils.ConfigManager")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                            Class.forName("com.batteryopt.pro.utils.LogStore")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
                     }
                 })
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 }

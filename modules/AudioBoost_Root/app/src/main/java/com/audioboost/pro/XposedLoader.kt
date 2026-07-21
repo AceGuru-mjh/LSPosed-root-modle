@@ -1,54 +1,38 @@
 package com.audioboost.pro
 
 import android.app.Application
-import com.audioboost.pro.hooks.*
+import android.util.Log
 import com.audioboost.pro.models.AudioConfig
-import com.audioboost.pro.utils.ConfigManager
-import com.audioboost.pro.utils.HookConfigReader
-import com.audioboost.pro.utils.LogStore
-import com.audioboost.pro.utils.AntiDetectionHelper
-import com.audioboost.pro.utils.EnvDetector
-import com.audioboost.pro.utils.LogX
-import com.audioboost.pro.utils.ModuleConflictDetector
-import com.audioboost.pro.utils.ShizukuHelper
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
-/**
- * AudioBoost Pro - Xposed 模块唯一入口（Root 版）
- *
- * 实现 IXposedHookLoadPackage + IXposedHookZygoteInit�?
- *
- * 工作流程�?
- *  APP启动 -> handleLoadPackage ->
- *    判断是否为目标音�?音频APP ->
- *    读取全局配置 ->
- *    [基础] 音量增强 / 低音增强 / 均衡�?
- *    [实验] 扬声器增�?/ 麦克风增�?/ 音质增强
- *    [Root 专属] 系统级音量突�?/ AudioFlinger 节点写入
- *    [Root 实验性] AudioPolicy 修改 / Shizuku Audio Bridge
- *
- * �?NoRoot 版区别：
- *  - 增加 SystemVolumeHook 通过 Shizuku 修改系统音量突破上限
- *  - 增加 AudioFlingerHook �?/sys/class/audio/pcm 节点
- *  - 增加 GlobalAudioPolicyHook 修改 AudioPolicy 配置
- *  - 增加 ShizukuAudioBridgeHook 执行 cmd media_audio
- *  - 所有系统级 Hook 必须先检�?ShizukuHelper.isShizukuAvailable()
- */
 class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
+        const val TAG = "LSP-AudioBoost-Root"
         const val VERSION = "1.0.12"
         var currentPkg: String? = null
     }
 
+    private fun tryInvoke(className: String, method: String, loader: ClassLoader, lpparam: XC_LoadPackage.LoadPackageParam, cfg: Any) {
+        try {
+            val cls = Class.forName(className, false, loader)
+            cls.getDeclaredMethod(method, XC_LoadPackage.LoadPackageParam::class.java, cfg.javaClass)
+                .invoke(null, lpparam, cfg)
+        } catch (e: Throwable) {
+            Log.e(TAG, "$className.$method FAIL: ${e.message}")
+        }
+    }
+
     override fun initZygote(param: IXposedHookZygoteInit.StartupParam) {
-        LogX.i("AudioBoost Pro v$VERSION 初始�?| LSPosed Root 模式")
-        // 预热 Shizuku 状�?
-        try { ShizukuHelper.isShizukuAvailable() } catch (_: Throwable) {}
+        Log.i(TAG, "AudioBoost Pro v$VERSION 初始化 | LSPosed Root 模式")
+        try {
+            Class.forName("com.audioboost.pro.utils.ShizukuHelper")
+                .getDeclaredMethod("isShizukuAvailable").invoke(null)
+        } catch (_: Throwable) {}
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -57,64 +41,65 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         val pkg = lpparam.packageName ?: return
         if (!isTargetApp(pkg)) return
 
-        LogX.i("=== AudioBoost v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (EnvDetector.isLocalMode) "local" else "integrated"} ===")
+        val local = isLocalMode()
+        Log.i(TAG, "=== AudioBoost v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (local) "local" else "integrated"} ===")
         currentPkg = pkg
 
-        LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
-        if (ModuleConflictDetector.checkConflict(lpparam)) {
-            LogX.w("检测到模块冲突，部分功能已禁用")
-            LogStore.add("warn", "模块冲突检测触�?)
+        Log.i(TAG, "环境: ${if (local) "本地模式" else "集成模式"}")
+        if (checkConflict(lpparam)) {
+            Log.w(TAG, "检测到模块冲突，部分功能已禁用")
+            addLogStore("warn", "模块冲突检测触发")
         }
 
         initConfig(lpparam)
-        if (!EnvDetector.isLocalMode) {
+        if (!local) {
             try { Thread.sleep(100) } catch (_: Throwable) { }
         }
 
         val cfg = loadConfig()
-        LogX.i("配置: 总开�?${cfg.masterEnabled} 音量=${cfg.volumeBoostEnabled} " +
-                "低音=${cfg.bassBoostEnabled} 均衡�?${cfg.equalizerEnabled} " +
-                "[实验]扬声�?${cfg.speakerBoostEnabled} 麦克�?${cfg.micBoostEnabled} 音质=${cfg.audioQualityEnhanceEnabled} " +
+        Log.i(TAG, "配置: 总开关${cfg.masterEnabled} 音量=${cfg.volumeBoostEnabled} " +
+                "低音=${cfg.bassBoostEnabled} 均衡器=${cfg.equalizerEnabled} " +
+                "[实验]扬声器=${cfg.speakerBoostEnabled} 麦克风=${cfg.micBoostEnabled} 音质=${cfg.audioQualityEnhanceEnabled} " +
                 "[Root]系统音量=${cfg.systemVolumeBoostEnabled} AudioFlinger=${cfg.audioFlingerNodeEnabled} " +
                 "[Root实验]AudioPolicy=${cfg.globalAudioPolicyEnabled} ShizukuBridge=${cfg.shizukuAudioBridgeEnabled}")
 
         if (!cfg.masterEnabled) {
-            LogX.i("总开关关闭，跳过所有Hook")
+            Log.i(TAG, "总开关关闭，跳过所有Hook")
             return
         }
 
-        // ===== 基础功能（同 NoRoot�?=====
-        if (cfg.volumeBoostEnabled) VolumeBoostHook.apply(lpparam, cfg)
-        if (cfg.bassBoostEnabled) BassBoostHook.apply(lpparam, cfg)
-        if (cfg.equalizerEnabled) EqualizerHook.apply(lpparam, cfg)
+        val loader = lpparam.classLoader
+        val HP = "com.audioboost.pro.hooks."
 
-        // ===== 实验性功能（�?NoRoot�?=====
-        if (cfg.speakerBoostEnabled) SpeakerBoostHook.apply(lpparam, cfg)
-        if (cfg.micBoostEnabled) MicBoostHook.apply(lpparam, cfg)
-        if (cfg.audioQualityEnhanceEnabled) AudioQualityEnhanceHook.apply(lpparam, cfg)
+        if (cfg.volumeBoostEnabled) tryInvoke(HP + "VolumeBoostHook", "apply", loader, lpparam, cfg)
+        if (cfg.bassBoostEnabled) tryInvoke(HP + "BassBoostHook", "apply", loader, lpparam, cfg)
+        if (cfg.equalizerEnabled) tryInvoke(HP + "EqualizerHook", "apply", loader, lpparam, cfg)
 
-        // ===== Root 专属（系统级，必须先检�?Shizuku�?=====
-        if (cfg.systemVolumeBoostEnabled) SystemVolumeHook.apply(lpparam, cfg)
-        if (cfg.audioFlingerNodeEnabled) AudioFlingerHook.apply(lpparam, cfg)
+        if (cfg.speakerBoostEnabled) tryInvoke(HP + "SpeakerBoostHook", "apply", loader, lpparam, cfg)
+        if (cfg.micBoostEnabled) tryInvoke(HP + "MicBoostHook", "apply", loader, lpparam, cfg)
+        if (cfg.audioQualityEnhanceEnabled) tryInvoke(HP + "AudioQualityEnhanceHook", "apply", loader, lpparam, cfg)
 
-        // ===== Root 实验�?=====
-        if (cfg.globalAudioPolicyEnabled) GlobalAudioPolicyHook.apply(lpparam, cfg)
-        if (cfg.shizukuAudioBridgeEnabled) ShizukuAudioBridgeHook.apply(lpparam, cfg)
+        if (cfg.systemVolumeBoostEnabled) tryInvoke(HP + "SystemVolumeHook", "apply", loader, lpparam, cfg)
+        if (cfg.audioFlingerNodeEnabled) tryInvoke(HP + "AudioFlingerHook", "apply", loader, lpparam, cfg)
 
-        // ===== [Task24] 系统级增�?=====
-        if (cfg.audioPolicyHackEnabled) AudioPolicyHackHook.apply(lpparam, cfg)
-        if (cfg.tinymixProbeEnabled) TinymixAudioHook.apply(lpparam, cfg)
+        if (cfg.globalAudioPolicyEnabled) tryInvoke(HP + "GlobalAudioPolicyHook", "apply", loader, lpparam, cfg)
+        if (cfg.shizukuAudioBridgeEnabled) tryInvoke(HP + "ShizukuAudioBridgeHook", "apply", loader, lpparam, cfg)
+
+        if (cfg.audioPolicyHackEnabled) tryInvoke(HP + "AudioPolicyHackHook", "apply", loader, lpparam, cfg)
+        if (cfg.tinymixProbeEnabled) tryInvoke(HP + "TinymixAudioHook", "apply", loader, lpparam, cfg)
 
         hookAppLifecycle(lpparam)
-        LogX.i("===== 全部Hook就绪: $pkg =====")
+        Log.i(TAG, "===== 全部Hook就绪: $pkg =====")
         } catch (e: Throwable) {
-            LogX.e("模块崩溃防护: ${lpparam.packageName}", e)
-            try { LogStore.add("error", "模块异常: ${e.message}") } catch (_: Exception) { }
-            AntiDetectionHelper.sleepDuringVerify()
+            Log.e(TAG, "模块崩溃防护: ${lpparam.packageName}", e)
+            try { addLogStore("error", "模块异常: ${e.message}") } catch (_: Exception) { }
+            try {
+                Class.forName("com.audioboost.pro.utils.AntiDetectionHelper")
+                    .getDeclaredMethod("sleepDuringVerify").invoke(null)
+            } catch (_: Throwable) {}
         }
     }
 
-    /** 目标APP包名白名单（�?NoRoot�?*/
     private fun isTargetApp(pkg: String) = pkg in listOf(
         "com.netease.cloudmusic", "com.tencent.wmusic", "com.kugou.android",
         "com.kuwo.player", "com.netease.cloudmusic.player", "com.spotify.music",
@@ -123,20 +108,59 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         "com.miui.player", "com.hihonor.cloudmusic"
     )
 
-    /** 读取配置：优先XSharedPreferences，回退Context */
+    private fun isLocalMode(): Boolean {
+        return try {
+            Class.forName("com.audioboost.pro.utils.EnvDetector")
+                .getDeclaredMethod("isLocalMode").invoke(null) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun checkConflict(lpparam: XC_LoadPackage.LoadPackageParam): Boolean {
+        return try {
+            Class.forName("com.audioboost.pro.utils.ModuleConflictDetector")
+                .getDeclaredMethod("checkConflict", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun addLogStore(level: String, msg: String) {
+        try {
+            Class.forName("com.audioboost.pro.utils.LogStore")
+                .getDeclaredMethod("add", String::class.java, String::class.java)
+                .invoke(null, level, msg)
+        } catch (_: Throwable) {}
+    }
+
     private fun loadConfig(): AudioConfig {
-        HookConfigReader.readGlobal()?.let { return it }
-        return try { ConfigManager.getGlobalConfig() } catch (_: Throwable) { AudioConfig(packageName = "global") }
+        try {
+            Class.forName("com.audioboost.pro.utils.HookConfigReader")
+                .getDeclaredMethod("readGlobal").invoke(null)?.let { return it as AudioConfig }
+        } catch (_: Throwable) {}
+        return try {
+            Class.forName("com.audioboost.pro.utils.ConfigManager")
+                .getDeclaredMethod("getGlobalConfig").invoke(null) as? AudioConfig ?: AudioConfig(packageName = "global")
+        } catch (_: Throwable) { AudioConfig(packageName = "global") }
     }
 
     private fun initConfig(lpparam: XC_LoadPackage.LoadPackageParam) {
-        EnvDetector.detect(lpparam)
+        try {
+            Class.forName("com.audioboost.pro.utils.EnvDetector")
+                .getDeclaredMethod("detect", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam)
+        } catch (_: Throwable) {}
         try {
             val at = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader)
             val cat = XposedHelpers.callStaticMethod(at, "currentActivityThread")
             val app = XposedHelpers.callMethod(cat, "getApplication") as? Application
-            if (app != null) { ConfigManager.init(app); LogStore.init(app) }
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+            if (app != null) {
+                Class.forName("com.audioboost.pro.utils.ConfigManager")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+                Class.forName("com.audioboost.pro.utils.LogStore")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+            }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 
     private fun hookAppLifecycle(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -146,9 +170,16 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(p: MethodHookParam) {
                         val app = p.thisObject as? Application ?: return
-                        try { ConfigManager.init(app); LogStore.init(app) } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+                        try {
+                            Class.forName("com.audioboost.pro.utils.ConfigManager")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                            Class.forName("com.audioboost.pro.utils.LogStore")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
                     }
                 })
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 }

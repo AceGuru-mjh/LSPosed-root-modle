@@ -1,67 +1,34 @@
 package com.adblockerx.pro
 
 import android.app.Application
-import com.adblockerx.pro.hooks.AdViewHideHook
-import com.adblockerx.pro.hooks.AdClosePlusHook
-import com.adblockerx.pro.hooks.CookieCleanHook
-import com.adblockerx.pro.hooks.DnsCacheFlushHook
-import com.adblockerx.pro.hooks.DnsResolverHook
-import com.adblockerx.pro.hooks.HostsFilterHook
-import com.adblockerx.pro.hooks.IntentInterceptorHook
-import com.adblockerx.pro.hooks.IptablesBlockHook
-import com.adblockerx.pro.hooks.OkHttpAdHook
-import com.adblockerx.pro.hooks.PrivateDnsHook
-import com.adblockerx.pro.hooks.RedirectBlockHook
-import com.adblockerx.pro.hooks.ShizukuBridgeHook
-import com.adblockerx.pro.hooks.SystemHostsHook
-import com.adblockerx.pro.hooks.TrackerBlockHook
-import com.adblockerx.pro.hooks.URLConnectionAdHook
-import com.adblockerx.pro.hooks.VpnBasedBlockHook
-import com.adblockerx.pro.hooks.WebViewAdHook
+import android.util.Log
 import com.adblockerx.pro.models.AdBlockConfig
-import com.adblockerx.pro.utils.ConfigManager
-import com.adblockerx.pro.utils.HookConfigReader
-import com.adblockerx.pro.utils.LogStore
-import com.adblockerx.pro.utils.AntiDetectionHelper
-import com.adblockerx.pro.utils.EnvDetector
-import com.adblockerx.pro.utils.LogX
-import com.adblockerx.pro.utils.ModuleConflictDetector
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
-/**
- * AdBlockerX Pro - Xposed 模块唯一入口（Root 版）
- *
- * 实现 IXposedHookLoadPackage + IXposedHookZygoteInit�?
- *
- * 工作流程�?
- *  APP启动 -> handleLoadPackage ->
- *    判断是否为目标APP ->
- *    读取全局配置 ->
- *    [1] 内存 hosts 过滤器初始化（最先执行）
- *    [2] WebView 广告拦截
- *    [3] OkHttp 广告拦截
- *    [4] URLConnection 广告拦截
- *    [5] 广告 SDK View 隐藏
- *    [实验] 追踪 / Cookie / 重定�?/ Intent 拦截
- *    [Root] 系统hosts / PrivateDNS / DNS解析 / Shizuku桥接
- *    [Root 实验] iptables / VPN 拦截
- *
- * 硬性限制：
- *  - Root 系统�?Hook 必须先检�?ShizukuHelper.isShizukuAvailable()
- */
 class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
+        const val TAG = "LSP-AdBlockerX-Root"
         const val VERSION = "1.0.12"
         var currentPkg: String? = null
     }
 
+    private fun tryInvoke(className: String, method: String, loader: ClassLoader, lpparam: XC_LoadPackage.LoadPackageParam, cfg: Any) {
+        try {
+            val cls = Class.forName(className, false, loader)
+            cls.getDeclaredMethod(method, XC_LoadPackage.LoadPackageParam::class.java, cfg.javaClass)
+                .invoke(null, lpparam, cfg)
+        } catch (e: Throwable) {
+            Log.e(TAG, "$className.$method FAIL: ${e.message}")
+        }
+    }
+
     override fun initZygote(param: IXposedHookZygoteInit.StartupParam) {
-        LogX.i("AdBlockerX Pro v$VERSION 初始�?| Root �?| LSPatch/LSPosed 兼容")
+        Log.i(TAG, "AdBlockerX Pro v$VERSION 初始化 | Root 版 | LSPatch/LSPosed 兼容")
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -71,22 +38,22 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         if (!isTargetApp(pkg)) return
 
         currentPkg = pkg
-        LogX.i("=== AdBlockerX v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (EnvDetector.isLocalMode) "local" else "integrated"} ===")
+        val local = isLocalMode()
+        Log.i(TAG, "=== AdBlockerX v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (local) "local" else "integrated"} ===")
 
-        LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
-        if (ModuleConflictDetector.checkConflict(lpparam)) {
-            LogX.w("检测到模块冲突，部分功能已禁用")
-            LogStore.add("warn", "模块冲突检测触�?)
+        Log.i(TAG, "环境: ${if (local) "本地模式" else "集成模式"}")
+        if (checkConflict(lpparam)) {
+            Log.w(TAG, "检测到模块冲突，部分功能已禁用")
+            addLogStore("warn", "模块冲突检测触发")
         }
 
         initConfig(lpparam)
-        if (!EnvDetector.isLocalMode) {
+        if (!local) {
             try { Thread.sleep(100) } catch (_: Throwable) { }
         }
 
         val cfg = loadConfig()
-        LogX.debugEnabled = cfg.logEnabled
-        LogX.i("配置: 总开�?${cfg.masterEnabled} WebView=${cfg.webviewAdEnabled} OkHttp=${cfg.okHttpAdEnabled} " +
+        Log.i(TAG, "配置: 总开关${cfg.masterEnabled} WebView=${cfg.webviewAdEnabled} OkHttp=${cfg.okHttpAdEnabled} " +
                 "URLConnection=${cfg.urlConnectionAdEnabled} Hosts=${cfg.hostsFilterEnabled} AdView=${cfg.adViewHideEnabled} " +
                 "[实验]Tracker=${cfg.trackerBlockEnabled} Cookie=${cfg.cookieCleanEnabled} " +
                 "Redirect=${cfg.redirectBlockEnabled} Intent=${cfg.intentInterceptorEnabled} " +
@@ -95,55 +62,51 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 "[Root实验]Iptables=${cfg.iptablesBlockEnabled} VPN=${cfg.vpnBasedBlockEnabled}")
 
         if (!cfg.masterEnabled) {
-            LogX.i("总开关关闭，跳过所有Hook")
+            Log.i(TAG, "总开关关闭，跳过所有Hook")
             return
         }
 
-        // ===== [1] 内存 hosts 过滤器（最先初始化�?=====
-        if (cfg.hostsFilterEnabled) {
-            HostsFilterHook.apply(lpparam, cfg)
-        }
+        val loader = lpparam.classLoader
+        val HP = "com.adblockerx.pro.hooks."
 
-        // ===== [2]-[5] 应用层基础 Hook =====
-        if (cfg.webviewAdEnabled) WebViewAdHook.apply(lpparam, cfg)
-        if (cfg.okHttpAdEnabled) OkHttpAdHook.apply(lpparam, cfg)
-        if (cfg.urlConnectionAdEnabled) URLConnectionAdHook.apply(lpparam, cfg)
-        if (cfg.adViewHideEnabled) AdViewHideHook.apply(lpparam, cfg)
+        if (cfg.hostsFilterEnabled) tryInvoke(HP + "HostsFilterHook", "apply", loader, lpparam, cfg)
 
-        // ===== 应用层实验�?=====
-        if (cfg.trackerBlockEnabled) TrackerBlockHook.apply(lpparam, cfg)
-        if (cfg.cookieCleanEnabled) CookieCleanHook.apply(lpparam, cfg)
-        if (cfg.redirectBlockEnabled) RedirectBlockHook.apply(lpparam, cfg)
-        if (cfg.intentInterceptorEnabled) IntentInterceptorHook.apply(lpparam, cfg)
+        if (cfg.webviewAdEnabled) tryInvoke(HP + "WebViewAdHook", "apply", loader, lpparam, cfg)
+        if (cfg.okHttpAdEnabled) tryInvoke(HP + "OkHttpAdHook", "apply", loader, lpparam, cfg)
+        if (cfg.urlConnectionAdEnabled) tryInvoke(HP + "URLConnectionAdHook", "apply", loader, lpparam, cfg)
+        if (cfg.adViewHideEnabled) tryInvoke(HP + "AdViewHideHook", "apply", loader, lpparam, cfg)
 
-        // ===== v1.0.6 新增（对�?AdClose�?=====
+        if (cfg.trackerBlockEnabled) tryInvoke(HP + "TrackerBlockHook", "apply", loader, lpparam, cfg)
+        if (cfg.cookieCleanEnabled) tryInvoke(HP + "CookieCleanHook", "apply", loader, lpparam, cfg)
+        if (cfg.redirectBlockEnabled) tryInvoke(HP + "RedirectBlockHook", "apply", loader, lpparam, cfg)
+        if (cfg.intentInterceptorEnabled) tryInvoke(HP + "IntentInterceptorHook", "apply", loader, lpparam, cfg)
+
         if (cfg.screenshotUnlockEnabled || cfg.shakeAdBlockEnabled || cfg.vpnDetectBypassEnabled) {
-            AdClosePlusHook.apply(lpparam, cfg)
+            tryInvoke(HP + "AdClosePlusHook", "apply", loader, lpparam, cfg)
         }
 
-        // ===== Root 专属：系统级 Hook =====
-        if (cfg.systemHostsEnabled) SystemHostsHook.apply(lpparam, cfg)
-        if (cfg.privateDnsEnabled) PrivateDnsHook.apply(lpparam, cfg)
-        if (cfg.dnsResolverHookEnabled) DnsResolverHook.apply(lpparam, cfg)
-        if (cfg.shizukuBridgeEnabled) ShizukuBridgeHook.apply(lpparam, cfg)
+        if (cfg.systemHostsEnabled) tryInvoke(HP + "SystemHostsHook", "apply", loader, lpparam, cfg)
+        if (cfg.privateDnsEnabled) tryInvoke(HP + "PrivateDnsHook", "apply", loader, lpparam, cfg)
+        if (cfg.dnsResolverHookEnabled) tryInvoke(HP + "DnsResolverHook", "apply", loader, lpparam, cfg)
+        if (cfg.shizukuBridgeEnabled) tryInvoke(HP + "ShizukuBridgeHook", "apply", loader, lpparam, cfg)
 
-        // ===== Root 实验�?=====
-        if (cfg.iptablesBlockEnabled) IptablesBlockHook.apply(lpparam, cfg)
-        if (cfg.vpnBasedBlockEnabled) VpnBasedBlockHook.apply(lpparam, cfg)
+        if (cfg.iptablesBlockEnabled) tryInvoke(HP + "IptablesBlockHook", "apply", loader, lpparam, cfg)
+        if (cfg.vpnBasedBlockEnabled) tryInvoke(HP + "VpnBasedBlockHook", "apply", loader, lpparam, cfg)
 
-        // ===== [Task24] 系统级增�?=====
-        if (cfg.dnsCacheFlushEnabled) DnsCacheFlushHook.apply(lpparam, cfg)
+        if (cfg.dnsCacheFlushEnabled) tryInvoke(HP + "DnsCacheFlushHook", "apply", loader, lpparam, cfg)
 
         hookAppLifecycle(lpparam)
-        LogX.i("===== 全部Hook就绪: $pkg =====")
+        Log.i(TAG, "===== 全部Hook就绪: $pkg =====")
         } catch (e: Throwable) {
-            LogX.e("模块崩溃防护: ${lpparam.packageName}", e)
-            try { LogStore.add("error", "模块异常: ${e.message}") } catch (_: Exception) { }
-            AntiDetectionHelper.sleepDuringVerify()
+            Log.e(TAG, "模块崩溃防护: ${lpparam.packageName}", e)
+            try { addLogStore("error", "模块异常: ${e.message}") } catch (_: Exception) { }
+            try {
+                Class.forName("com.adblockerx.pro.utils.AntiDetectionHelper")
+                    .getDeclaredMethod("sleepDuringVerify").invoke(null)
+            } catch (_: Throwable) {}
         }
     }
 
-    /** 目标APP包名白名�?*/
     private fun isTargetApp(pkg: String) = pkg in listOf(
         "com.android.chrome",
         "com.mi.globalbrowser",
@@ -162,19 +125,59 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         "com.tencent.wmusic"
     )
 
+    private fun isLocalMode(): Boolean {
+        return try {
+            Class.forName("com.adblockerx.pro.utils.EnvDetector")
+                .getDeclaredMethod("isLocalMode").invoke(null) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun checkConflict(lpparam: XC_LoadPackage.LoadPackageParam): Boolean {
+        return try {
+            Class.forName("com.adblockerx.pro.utils.ModuleConflictDetector")
+                .getDeclaredMethod("checkConflict", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun addLogStore(level: String, msg: String) {
+        try {
+            Class.forName("com.adblockerx.pro.utils.LogStore")
+                .getDeclaredMethod("add", String::class.java, String::class.java)
+                .invoke(null, level, msg)
+        } catch (_: Throwable) {}
+    }
+
     private fun loadConfig(): AdBlockConfig {
-        HookConfigReader.readGlobal()?.let { return it }
-        return try { ConfigManager.getGlobalConfig() } catch (_: Throwable) { AdBlockConfig() }
+        try {
+            Class.forName("com.adblockerx.pro.utils.HookConfigReader")
+                .getDeclaredMethod("readGlobal").invoke(null)?.let { return it as AdBlockConfig }
+        } catch (_: Throwable) {}
+        return try {
+            Class.forName("com.adblockerx.pro.utils.ConfigManager")
+                .getDeclaredMethod("getGlobalConfig").invoke(null) as? AdBlockConfig ?: AdBlockConfig()
+        } catch (_: Throwable) { AdBlockConfig() }
     }
 
     private fun initConfig(lpparam: XC_LoadPackage.LoadPackageParam) {
-        EnvDetector.detect(lpparam)
+        try {
+            Class.forName("com.adblockerx.pro.utils.EnvDetector")
+                .getDeclaredMethod("detect", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam)
+        } catch (_: Throwable) {}
         try {
             val at = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader)
             val cat = XposedHelpers.callStaticMethod(at, "currentActivityThread")
             val app = XposedHelpers.callMethod(cat, "getApplication") as? Application
-            if (app != null) { ConfigManager.init(app); LogStore.init(app) }
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+            if (app != null) {
+                Class.forName("com.adblockerx.pro.utils.ConfigManager")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+                Class.forName("com.adblockerx.pro.utils.LogStore")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+            }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 
     private fun hookAppLifecycle(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -184,9 +187,16 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(p: MethodHookParam) {
                         val app = p.thisObject as? Application ?: return
-                        try { ConfigManager.init(app); LogStore.init(app) } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+                        try {
+                            Class.forName("com.adblockerx.pro.utils.ConfigManager")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                            Class.forName("com.adblockerx.pro.utils.LogStore")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
                     }
                 })
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 }

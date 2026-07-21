@@ -1,60 +1,34 @@
 package com.videosaver.pro
 
 import android.app.Application
-import com.videosaver.pro.hooks.AutoDownloadHook
-import com.videosaver.pro.hooks.BatchDownloadHook
-import com.videosaver.pro.hooks.BiliDownloadHook
-import com.videosaver.pro.hooks.DouyinNoWatermarkHook
-import com.videosaver.pro.hooks.GlobalVideoAdBlockHook
-import com.videosaver.pro.hooks.KernelVideoEnhanceHook
-import com.videosaver.pro.hooks.KuaishouNoWatermarkHook
-import com.videosaver.pro.hooks.MediaScannerHook
-import com.videosaver.pro.hooks.RemoveVideoAdsHook
-import com.videosaver.pro.hooks.SaveOriginalQualityHook
-import com.videosaver.pro.hooks.ShizukuVideoBridgeHook
-import com.videosaver.pro.hooks.SystemDownloadHook
-import com.videosaver.pro.hooks.XhsNoWatermarkHook
+import android.util.Log
 import com.videosaver.pro.models.VideoConfig
-import com.videosaver.pro.utils.ConfigManager
-import com.videosaver.pro.utils.HookConfigReader
-import com.videosaver.pro.utils.LogStore
-import com.videosaver.pro.utils.AntiDetectionHelper
-import com.videosaver.pro.utils.EnvDetector
-import com.videosaver.pro.utils.LogX
-import com.videosaver.pro.utils.ModuleConflictDetector
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
-/**
- * VideoSaver Pro - Xposed 模块唯一入口（Root 版）
- *
- * 实现 IXposedHookLoadPackage + IXposedHookZygoteInit�?
- *
- * 工作流程�?
- *  APP启动 -> handleLoadPackage ->
- *    判断是否为目标APP ->
- *    读取全局配置 ->
- *    [1] 抖音无水�?[2] 快手无水�?[3] 小红书无水印 [4] B站下�?
- *    [实验] 自动下载 / 去广�?/ 原画�?/ 批量下载
- *    [Root] 系统下载 / Shizuku 桥接
- *    [Root 实验] 全局广告屏蔽 / 内核视频增强
- *
- * 硬性限制：
- *  - Root 系统�?Hook 必须先检�?ShizukuHelper.isShizukuAvailable()
- *  - 系统�?Hook 失败时降级为应用�?Hook
- */
 class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
+        const val TAG = "LSP-VideoSaver-Root"
         const val VERSION = "1.0.12"
         var currentPkg: String? = null
     }
 
+    private fun tryInvoke(className: String, method: String, loader: ClassLoader, lpparam: XC_LoadPackage.LoadPackageParam, cfg: Any) {
+        try {
+            val cls = Class.forName(className, false, loader)
+            cls.getDeclaredMethod(method, XC_LoadPackage.LoadPackageParam::class.java, cfg.javaClass)
+                .invoke(null, lpparam, cfg)
+        } catch (e: Throwable) {
+            Log.e(TAG, "$className.$method FAIL: ${e.message}")
+        }
+    }
+
     override fun initZygote(param: IXposedHookZygoteInit.StartupParam) {
-        LogX.i("VideoSaver Pro v$VERSION 初始�?| Root �?)
+        Log.i(TAG, "VideoSaver Pro v$VERSION 初始化 | Root 版")
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -63,94 +37,134 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
         val pkg = lpparam.packageName ?: return
         if (!isTargetApp(pkg)) return
 
-        LogX.i("=== VideoSaver v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (EnvDetector.isLocalMode) "local" else "integrated"} ===")
+        val local = isLocalMode()
+        Log.i(TAG, "=== VideoSaver v$VERSION starting | pkg=$pkg | process=${lpparam.processName} | mode=${if (local) "local" else "integrated"} ===")
         currentPkg = pkg
 
-        LogX.i("环境: ${if (EnvDetector.isLocalMode) "本地模式" else "集成模式"}")
-        if (ModuleConflictDetector.checkConflict(lpparam)) {
-            LogX.w("检测到模块冲突，部分功能已禁用")
-            LogStore.add("warn", "模块冲突检测触�?)
+        Log.i(TAG, "环境: ${if (local) "本地模式" else "集成模式"}")
+        if (checkConflict(lpparam)) {
+            Log.w(TAG, "检测到模块冲突，部分功能已禁用")
+            addLogStore("warn", "模块冲突检测触发")
         }
 
         initConfig(lpparam)
-        if (!EnvDetector.isLocalMode) {
+        if (!local) {
             try { Thread.sleep(100) } catch (_: Throwable) { }
         }
 
         val cfg = loadConfig()
         cfg.packageName = pkg
-        LogX.i("配置: 总开�?${cfg.masterEnabled} 抖音=${cfg.douyinNoWatermark} " +
-                "快手=${cfg.kuaishouNoWatermark} 小红�?${cfg.xhsNoWatermark} B�?${cfg.biliDownload} " +
-                "[实验]自动下载=${cfg.autoDownloadEnabled} 去广�?${cfg.removeAdsEnabled} " +
-                "原画�?${cfg.saveOriginalQualityEnabled} 批量下载=${cfg.batchDownloadEnabled} " +
+        Log.i(TAG, "配置: 总开关${cfg.masterEnabled} 抖音=${cfg.douyinNoWatermark} " +
+                "快手=${cfg.kuaishouNoWatermark} 小红书=${cfg.xhsNoWatermark} B站=${cfg.biliDownload} " +
+                "[实验]自动下载=${cfg.autoDownloadEnabled} 去广告=${cfg.removeAdsEnabled} " +
+                "原画质=${cfg.saveOriginalQualityEnabled} 批量下载=${cfg.batchDownloadEnabled} " +
                 "[Root]系统下载=${cfg.systemDownloadEnabled} Shizuku桥接=${cfg.shizukuVideoBridgeEnabled} " +
                 "[Root实验]全局广告=${cfg.globalVideoAdBlockEnabled} 内核增强=${cfg.kernelVideoEnhanceEnabled}")
 
         if (!cfg.masterEnabled) {
-            LogX.i("总开关关闭，跳过所有Hook")
+            Log.i(TAG, "总开关关闭，跳过所有Hook")
             return
         }
 
-        // ===== 基础功能（同 NoRoot�?=====
-        if (cfg.douyinNoWatermark) DouyinNoWatermarkHook.apply(lpparam, cfg)
-        if (cfg.kuaishouNoWatermark) KuaishouNoWatermarkHook.apply(lpparam, cfg)
-        if (cfg.xhsNoWatermark) XhsNoWatermarkHook.apply(lpparam, cfg)
-        if (cfg.biliDownload) BiliDownloadHook.apply(lpparam, cfg)
+        val loader = lpparam.classLoader
+        val HP = "com.videosaver.pro.hooks."
 
-        // ===== 实验性（�?NoRoot�?=====
-        if (cfg.autoDownloadEnabled) AutoDownloadHook.apply(lpparam, cfg)
-        if (cfg.removeAdsEnabled) RemoveVideoAdsHook.apply(lpparam, cfg)
-        if (cfg.saveOriginalQualityEnabled) SaveOriginalQualityHook.apply(lpparam, cfg)
-        if (cfg.batchDownloadEnabled) BatchDownloadHook.apply(lpparam, cfg)
+        if (cfg.douyinNoWatermark) tryInvoke(HP + "DouyinNoWatermarkHook", "apply", loader, lpparam, cfg)
+        if (cfg.kuaishouNoWatermark) tryInvoke(HP + "KuaishouNoWatermarkHook", "apply", loader, lpparam, cfg)
+        if (cfg.xhsNoWatermark) tryInvoke(HP + "XhsNoWatermarkHook", "apply", loader, lpparam, cfg)
+        if (cfg.biliDownload) tryInvoke(HP + "BiliDownloadHook", "apply", loader, lpparam, cfg)
 
-        // ===== Root 专属：系统级 Hook（需 Shizuku�?=====
-        if (cfg.systemDownloadEnabled) SystemDownloadHook.apply(lpparam, cfg)
-        if (cfg.shizukuVideoBridgeEnabled) ShizukuVideoBridgeHook.apply(lpparam, cfg)
+        if (cfg.autoDownloadEnabled) tryInvoke(HP + "AutoDownloadHook", "apply", loader, lpparam, cfg)
+        if (cfg.removeAdsEnabled) tryInvoke(HP + "RemoveVideoAdsHook", "apply", loader, lpparam, cfg)
+        if (cfg.saveOriginalQualityEnabled) tryInvoke(HP + "SaveOriginalQualityHook", "apply", loader, lpparam, cfg)
+        if (cfg.batchDownloadEnabled) tryInvoke(HP + "BatchDownloadHook", "apply", loader, lpparam, cfg)
 
-        // ===== Root 实验�?=====
-        if (cfg.globalVideoAdBlockEnabled) GlobalVideoAdBlockHook.apply(lpparam, cfg)
-        if (cfg.kernelVideoEnhanceEnabled) KernelVideoEnhanceHook.apply(lpparam, cfg)
+        if (cfg.systemDownloadEnabled) tryInvoke(HP + "SystemDownloadHook", "apply", loader, lpparam, cfg)
+        if (cfg.shizukuVideoBridgeEnabled) tryInvoke(HP + "ShizukuVideoBridgeHook", "apply", loader, lpparam, cfg)
 
-        // ===== [Task24] 系统级增�?=====
-        if (cfg.mediaScannerEnabled) MediaScannerHook.apply(lpparam, cfg)
+        if (cfg.globalVideoAdBlockEnabled) tryInvoke(HP + "GlobalVideoAdBlockHook", "apply", loader, lpparam, cfg)
+        if (cfg.kernelVideoEnhanceEnabled) tryInvoke(HP + "KernelVideoEnhanceHook", "apply", loader, lpparam, cfg)
+
+        if (cfg.mediaScannerEnabled) tryInvoke(HP + "MediaScannerHook", "apply", loader, lpparam, cfg)
 
         hookAppLifecycle(lpparam)
-        LogX.i("===== 全部Hook就绪: $pkg =====")
+        Log.i(TAG, "===== 全部Hook就绪: $pkg =====")
         } catch (e: Throwable) {
-            LogX.e("模块崩溃防护: ${lpparam.packageName}", e)
-            try { LogStore.add("error", "模块异常: ${e.message}") } catch (_: Exception) { }
-            AntiDetectionHelper.sleepDuringVerify()
+            Log.e(TAG, "模块崩溃防护: ${lpparam.packageName}", e)
+            try { addLogStore("error", "模块异常: ${e.message}") } catch (_: Exception) { }
+            try {
+                Class.forName("com.videosaver.pro.utils.AntiDetectionHelper")
+                    .getDeclaredMethod("sleepDuringVerify").invoke(null)
+            } catch (_: Throwable) {}
         }
     }
 
-    /** 目标APP包名白名�?*/
     private fun isTargetApp(pkg: String) = pkg in listOf(
-        "com.ss.android.ugc.aweme",       // 抖音
-        "com.ss.android.ugc.aweme.lite",  // 抖音极速版
-        "com.smile.gifmaker",             // 快手
-        "com.kuaishou.nebula",            // 快手极速版
-        "com.xingin.xhs",                 // 小红�?
-        "com.xingin.xhscircle",           // 小红书圈�?
-        "tv.danmaku.bili",                // B�?
-        "com.tencent.qqlive",             // 腾讯视频
-        "com.ss.android.article.video",   // 西瓜视频
-        "com.hihonor.cloudmusic"          // 华为音乐
+        "com.ss.android.ugc.aweme",
+        "com.ss.android.ugc.aweme.lite",
+        "com.smile.gifmaker",
+        "com.kuaishou.nebula",
+        "com.xingin.xhs",
+        "com.xingin.xhscircle",
+        "tv.danmaku.bili",
+        "com.tencent.qqlive",
+        "com.ss.android.article.video",
+        "com.hihonor.cloudmusic"
     )
 
-    /** 读取配置：优先XSharedPreferences，回退Context */
+    private fun isLocalMode(): Boolean {
+        return try {
+            Class.forName("com.videosaver.pro.utils.EnvDetector")
+                .getDeclaredMethod("isLocalMode").invoke(null) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun checkConflict(lpparam: XC_LoadPackage.LoadPackageParam): Boolean {
+        return try {
+            Class.forName("com.videosaver.pro.utils.ModuleConflictDetector")
+                .getDeclaredMethod("checkConflict", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam) as? Boolean ?: false
+        } catch (_: Throwable) { false }
+    }
+
+    private fun addLogStore(level: String, msg: String) {
+        try {
+            Class.forName("com.videosaver.pro.utils.LogStore")
+                .getDeclaredMethod("add", String::class.java, String::class.java)
+                .invoke(null, level, msg)
+        } catch (_: Throwable) {}
+    }
+
     private fun loadConfig(): VideoConfig {
-        HookConfigReader.readGlobal()?.let { return it }
-        return try { ConfigManager.getGlobalConfig() } catch (_: Throwable) { VideoConfig(packageName = "global") }
+        try {
+            Class.forName("com.videosaver.pro.utils.HookConfigReader")
+                .getDeclaredMethod("readGlobal").invoke(null)?.let { return it as VideoConfig }
+        } catch (_: Throwable) {}
+        return try {
+            Class.forName("com.videosaver.pro.utils.ConfigManager")
+                .getDeclaredMethod("getGlobalConfig").invoke(null) as? VideoConfig ?: VideoConfig(packageName = "global")
+        } catch (_: Throwable) { VideoConfig(packageName = "global") }
     }
 
     private fun initConfig(lpparam: XC_LoadPackage.LoadPackageParam) {
-        EnvDetector.detect(lpparam)
+        try {
+            Class.forName("com.videosaver.pro.utils.EnvDetector")
+                .getDeclaredMethod("detect", XC_LoadPackage.LoadPackageParam::class.java)
+                .invoke(null, lpparam)
+        } catch (_: Throwable) {}
         try {
             val at = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader)
             val cat = XposedHelpers.callStaticMethod(at, "currentActivityThread")
             val app = XposedHelpers.callMethod(cat, "getApplication") as? Application
-            if (app != null) { ConfigManager.init(app); LogStore.init(app) }
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+            if (app != null) {
+                Class.forName("com.videosaver.pro.utils.ConfigManager")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+                Class.forName("com.videosaver.pro.utils.LogStore")
+                    .getDeclaredMethod("init", android.content.Context::class.java)
+                    .invoke(null, app)
+            }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 
     private fun hookAppLifecycle(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -160,9 +174,16 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(p: MethodHookParam) {
                         val app = p.thisObject as? Application ?: return
-                        try { ConfigManager.init(app); LogStore.init(app) } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+                        try {
+                            Class.forName("com.videosaver.pro.utils.ConfigManager")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                            Class.forName("com.videosaver.pro.utils.LogStore")
+                                .getDeclaredMethod("init", android.content.Context::class.java)
+                                .invoke(null, app)
+                        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
                     }
                 })
-        } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
+        } catch (e: Throwable) { Log.w(TAG, "异常: ${e.message}") }
     }
 }
