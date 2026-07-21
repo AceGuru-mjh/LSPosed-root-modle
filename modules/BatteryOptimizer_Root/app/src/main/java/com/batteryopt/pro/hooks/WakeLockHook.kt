@@ -1,6 +1,7 @@
 package com.batteryopt.pro.hooks
 
 import com.batteryopt.pro.models.BatteryConfig
+import com.batteryopt.pro.utils.LogStore
 import com.batteryopt.pro.utils.LogX
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
@@ -80,6 +81,8 @@ object WakeLockHook {
                                 if (held) {
                                     XposedHelpers.callMethod(p.thisObject, "release")
                                     LogX.w("已立即释放冗余 wake lock: $tag")
+                                    try { LogStore.add("optimized", "释放 wake lock: $tag") } catch (_: Exception) { }
+                                    try { LogStore.incrementCounter(1) } catch (_: Exception) { }
                                 }
                             } catch (e: Exception) {
                                 LogX.e("立即释放冗余 wake lock 异常: $tag", e)
@@ -127,6 +130,8 @@ object WakeLockHook {
                                 if (held) {
                                     XposedHelpers.callMethod(p.thisObject, "release")
                                     LogX.w("已立即释放冗余 wake lock: $tag")
+                                    try { LogStore.add("optimized", "释放 wake lock: $tag") } catch (_: Exception) { }
+                                    try { LogStore.incrementCounter(1) } catch (_: Exception) { }
                                 }
                             } catch (e: Exception) {
                                 LogX.e("立即释放冗余 wake lock 异常: $tag", e)

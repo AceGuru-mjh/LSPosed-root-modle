@@ -2,6 +2,7 @@ package com.adblockerx.pro.hooks
 
 import android.view.View
 import com.adblockerx.pro.models.AdBlockConfig
+import com.adblockerx.pro.utils.LogStore
 import com.adblockerx.pro.utils.LogX
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
@@ -62,6 +63,8 @@ object AdViewHideHook {
                             val view = p.thisObject as? View ?: return
                             try {
                                 view.visibility = View.GONE
+                                try { LogStore.add("hidden", "隐藏广告视图") } catch (_: Exception) { }
+                                try { LogStore.incrementCounter(1) } catch (_: Exception) { }
                             } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
                         }
                     })

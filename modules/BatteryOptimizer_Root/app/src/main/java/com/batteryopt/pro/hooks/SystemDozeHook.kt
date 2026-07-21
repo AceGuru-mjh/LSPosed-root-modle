@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
 import com.batteryopt.pro.models.BatteryConfig
+import com.batteryopt.pro.utils.LogStore
 import com.batteryopt.pro.utils.LogX
 import com.batteryopt.pro.utils.ShizukuHelper
 import de.robv.android.xposed.XC_MethodHook
@@ -109,6 +110,8 @@ object SystemDozeHook {
             }
             val out = ShizukuHelper.execShell("dumpsys deviceidle force-idle deep")
             LogX.i("已强制进入深度 Doze: $out")
+            try { LogStore.add("doze", "强制进入深度Doze") } catch (_: Exception) { }
+            try { LogStore.incrementCounter(1) } catch (_: Exception) { }
         }
         pendingForceIdle = r
         handler.postDelayed(r, delaySec * 1000L)
