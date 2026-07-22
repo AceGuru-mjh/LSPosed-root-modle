@@ -222,7 +222,7 @@ fun UpdateScreen() {
             // Download & install
             if (ui.hasUpdate && !ui.isIgnored) {
                 Spacer(Modifier.height(12.dp))
-                val apk = UpdateChecker.findMatchingApk(ui, "GameUnlockerPro_Root")
+                val apk = UpdateChecker.findMatchingApk(ui, "AudioBoost_Root")
                 if (apk != null) {
                     Text("${apk.name} (%.1f MB)".format(apk.sizeBytes / 1024.0 / 1024.0),
                         style = MaterialTheme.typography.bodySmall)
