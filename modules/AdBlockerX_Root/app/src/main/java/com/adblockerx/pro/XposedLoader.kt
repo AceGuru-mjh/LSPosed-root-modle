@@ -13,7 +13,7 @@ class XposedLoader : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
     companion object {
         const val TAG = "LSP-AdBlockerX-Root"
-        const val VERSION = "1.0.12"
+        const val VERSION = "1.0.13"
         var currentPkg: String? = null
     }
 
