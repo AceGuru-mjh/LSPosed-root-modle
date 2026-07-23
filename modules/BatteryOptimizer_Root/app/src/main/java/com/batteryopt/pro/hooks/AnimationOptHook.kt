@@ -7,12 +7,12 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * 动画关闭优化 Hook（应用层�?
+ * 鍔ㄧ敾鍏抽棴浼樺寲 Hook锛堝簲鐢ㄥ眰锛?
  */
 object AnimationOptHook {
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: BatteryConfig) {
-        LogX.i("Animation 动画优化启动 | scale=${cfg.animationScale}")
+        LogX.i("Animation 鍔ㄧ敾浼樺寲鍚姩 | scale=${cfg.animationScale}")
 
         hookValueAnimator(lpparam, cfg)
         hookObjectAnimator(lpparam)
@@ -42,7 +42,7 @@ object AnimationOptHook {
                 })
             LogX.hookSuccess("ValueAnimator", "setDuration")
         } catch (e: Exception) {
-            LogX.e("Hook ValueAnimator 异常", e)
+            LogX.e("Hook ValueAnimator 寮傚父", e)
         }
     }
 
@@ -60,7 +60,7 @@ object AnimationOptHook {
                     }
                 })
             LogX.hookSuccess("ObjectAnimator", "start")
-        } catch (e: Exception) { LogX.w("异常: ${e.message}") }
+        } catch (e: Exception) { LogX.w("寮傚父: ${e.message}") }
     }
 
     private fun hookViewAnimation(
@@ -87,12 +87,12 @@ object AnimationOptHook {
                             } else if (cfg.animationScale < 1f) {
                                 durMethod.invoke(anim, (cur * cfg.animationScale).toLong())
                             }
-                        } catch (e: Exception) { LogX.w("异常: ${e.message}") }
+                        } catch (e: Exception) { LogX.w("寮傚父: ${e.message}") }
                     }
                 })
             LogX.hookSuccess("View", "startAnimation")
         } catch (e: Exception) {
-            LogX.e("Hook View.startAnimation 异常", e)
+            LogX.e("Hook View.startAnimation 寮傚父", e)
         }
     }
 }

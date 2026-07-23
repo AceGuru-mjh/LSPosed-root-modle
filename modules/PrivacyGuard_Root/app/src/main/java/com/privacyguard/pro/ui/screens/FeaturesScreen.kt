@@ -29,46 +29,46 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
             .verticalScroll(scroll)
             .padding(16.dp)
     ) {
-        Text("基础功能（应用层�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("基础功能（应用层??, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "设备ID伪�?, "IMEI/AndroidID/MAC/Serial 等设备标识随机伪�?,
+            "设备ID伪??, "IMEI/AndroidID/MAC/Serial 等设备标识随机伪??,
             cfg.deviceIdSpoofEnabled,
             { val nc = cfg.copy(deviceIdSpoofEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "剪贴板保�?, "监控并可选阻断应用读取剪贴板",
+            "剪贴板保??, "监控并可选阻断应用读取剪贴板",
             cfg.clipboardGuardEnabled,
             { val nc = cfg.copy(clipboardGuardEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "剪贴板读取拦�?, "完全阻断应用读取剪贴板（可能影响粘贴功能�?,
+            "剪贴板读取拦??, "完全阻断应用读取剪贴板（可能影响粘贴功能??,
             cfg.clipboardBlockRead,
             { val nc = cfg.copy(clipboardBlockRead = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "权限检查欺�?, "让应用误以为危险权限未授予，触发降级行为",
+            "权限检查欺??, "让应用误以为危险权限未授予，触发降级行为",
             cfg.permissionSpoofEnabled,
             { val nc = cfg.copy(permissionSpoofEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "GPS位置伪�?, "伪造经纬度坐标（下方可调）",
+            "GPS位置伪??, "伪造经纬度坐标（下方可调）",
             cfg.locationSpoofEnabled,
             { val nc = cfg.copy(locationSpoofEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "传感器伪�?, "加速度/陀螺仪返回静态或加噪数据，防指纹",
+            "传感器伪??, "加速度/陀螺仪返回静态或加噪数据，防指纹",
             cfg.sensorFakerEnabled,
             { val nc = cfg.copy(sensorFakerEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
@@ -81,11 +81,11 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("应用层实验性功�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+        Text("应用层实验性功??, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "已安装应用可见性伪�?, "从查询结果中隐藏 Xposed/Shizuku/Magisk 等敏感应�?,
+            "已安装应用可见性伪??, "从查询结果中隐藏 Xposed/Shizuku/Magisk 等敏感应??,
             cfg.packageVisibilitySpoofEnabled,
             { val nc = cfg.copy(packageVisibilitySpoofEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true
@@ -93,7 +93,7 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "网络信息伪�?, "伪造本机IP/DNS/MAC，防网络指纹追踪",
+            "网络信息伪??, "伪造本机IP/DNS/MAC，防网络指纹追踪",
             cfg.networkInfoSpoofEnabled,
             { val nc = cfg.copy(networkInfoSpoofEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true
@@ -101,7 +101,7 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "屏幕参数防指�?, "伪造分辨率/密度/刷新率，防屏幕特征追�?,
+            "屏幕参数防指??, "伪造分辨率/密度/刷新率，防屏幕特征追??,
             cfg.screenMetricsSpoofEnabled,
             { val nc = cfg.copy(screenMetricsSpoofEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true
@@ -116,11 +116,11 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("Root 系统级功能（需 Shizuku�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        Text("Root 系统级功能（需 Shizuku??, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "系统属性伪�?, "Shizuku setprop 修改 ro.serialno/ro.product.* 等系统属�?,
+            "系统属性伪??, "Shizuku setprop 修改 ro.serialno/ro.product.* 等系统属??,
             cfg.systemPropSpoofEnabled,
             { val nc = cfg.copy(systemPropSpoofEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             rootLevel = true
@@ -136,7 +136,7 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "网络标识伪�?, "Shizuku 修改网卡MAC（写 /sys/class/net/wlan0/address �?ip link set�?,
+            "网络标识伪??, "Shizuku 修改网卡MAC（写 /sys/class/net/wlan0/address ??ip link set??,
             cfg.networkIdentifierHookEnabled,
             { val nc = cfg.copy(networkIdentifierHookEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             rootLevel = true
@@ -151,11 +151,11 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("Root 实验性功�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        Text("Root 实验性功??, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "SELinux 上下文伪�?, "Hook android.os.SELinux + /proc/self/attr/current 返回伪造上下文",
+            "SELinux 上下文伪??, "Hook android.os.SELinux + /proc/self/attr/current 返回伪造上下文",
             cfg.selinuxContextSpoofEnabled,
             { val nc = cfg.copy(selinuxContextSpoofEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true, rootLevel = true
@@ -163,18 +163,18 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "内核 cmdline 隐藏", "Hook 读取 /proc/cmdline 返回混淆内容，干�?Root 检�?,
+            "内核 cmdline 隐藏", "Hook 读取 /proc/cmdline 返回混淆内容，干??Root 检??,
             cfg.kernelCmdlineHideEnabled,
             { val nc = cfg.copy(kernelCmdlineHideEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true, rootLevel = true
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("系统级增强（Task24 新增�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        Text("系统级增强（Task24 新增??, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "build.prop 持久化伪�?, "Shizuku �?Magisk overlay /data/adb/modules/.../system/build.prop，重启仍生效",
+            "build.prop 持久化伪??, "Shizuku ??Magisk overlay /data/adb/modules/.../system/build.prop，重启仍生效",
             cfg.buildPropSpoofEnabled,
             { val nc = cfg.copy(buildPropSpoofEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             rootLevel = true
@@ -182,18 +182,18 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "/proc 文件读取隐藏", "Hook FileInputStream/BufferedReader/File.exists 拦截 su/magisk/xposed 字符�?,
+            "/proc 文件读取隐藏", "Hook FileInputStream/BufferedReader/File.exists 拦截 su/magisk/xposed 字符??,
             cfg.procHideEnabled,
             { val nc = cfg.copy(procHideEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             rootLevel = true
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("Shizuku 系统级挂载（Root�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        Text("Shizuku 系统级挂载（Root??, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "内核 cmdline 挂载替换", "Shizuku mount --bind 替换 /proc/cmdline，OS级隐�?orange 状�?,
+            "内核 cmdline 挂载替换", "Shizuku mount --bind 替换 /proc/cmdline，OS级隐??orange 状??,
             cfg.kernelCmdlineMountEnabled,
             { val nc = cfg.copy(kernelCmdlineMountEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             rootLevel = true
@@ -209,7 +209,7 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "/proc/mounts Magisk 隐藏", "Shizuku mount --bind 过滤 /proc/mounts 中的 Magisk 挂载�?,
+            "/proc/mounts Magisk 隐藏", "Shizuku mount --bind 过滤 /proc/mounts 中的 Magisk 挂载??,
             cfg.procMountsHideEnabled,
             { val nc = cfg.copy(procMountsHideEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             rootLevel = true
@@ -249,9 +249,9 @@ fun FeaturesScreen(cfg: PrivacyConfig, onConfigChange: (PrivacyConfig) -> Unit) 
         if (cfg.sensorFakerEnabled) {
             Spacer(Modifier.height(16.dp)
             )
-            Text("传感器噪声级�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("传感器噪声级??, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
-            val levels = listOf("静�?, "加噪1", "加噪2", "加噪3")
+            val levels = listOf("静??, "加噪1", "加噪2", "加噪3")
             Text("当前: ${levels[cfg.sensorNoiseMode]}", style = MaterialTheme.typography.bodySmall)
             val sensorNoiseModeState = remember(cfg) { mutableFloatStateOf(cfg.sensorNoiseMode.toFloat()) }
             Slider(

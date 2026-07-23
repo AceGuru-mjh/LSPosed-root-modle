@@ -67,9 +67,9 @@ fun MainScreen() {
         val onCfgChange: (AudioConfig) -> Unit = { cfg = it }
 
         val screens = listOf(
-            Triple("home", "总开�?, Icons.Default.PowerSettingsNew),
-            Triple("features", "功能", Icons.Default.Build),
-            Triple("about", "关于", Icons.Default.Info)
+            Triple("home", "鎬诲紑鍏?, Icons.Default.PowerSettingsNew),
+            Triple("features", "鍔熻兘", Icons.Default.Build),
+            Triple("about", "鍏充簬", Icons.Default.Info)
         )
 
         Scaffold(

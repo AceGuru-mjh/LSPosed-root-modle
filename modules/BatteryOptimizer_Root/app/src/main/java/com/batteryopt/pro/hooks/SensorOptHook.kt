@@ -7,14 +7,14 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * SensorManager 传感器降�?Hook（应用层�?
+ * SensorManager 浼犳劅鍣ㄩ檷棰?Hook锛堝簲鐢ㄥ眰锛?
  */
 object SensorOptHook {
 
     private const val HIGH_FREQ_THRESHOLD_US = 20_000
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: BatteryConfig) {
-        LogX.i("Sensor 传感器优化启�?| 上限=${cfg.sensorMaxRateUs}us")
+        LogX.i("Sensor 浼犳劅鍣ㄤ紭鍖栧惎鍔?| 涓婇檺=${cfg.sensorMaxRateUs}us")
 
         hookRegisterListener(lpparam, cfg)
     }
@@ -38,13 +38,13 @@ object SensorOptHook {
                         if (period < HIGH_FREQ_THRESHOLD_US) {
                             val old = period
                             p.args[2] = cfg.sensorMaxRateUs
-                            LogX.w("传感器降�? ${old}us -> ${cfg.sensorMaxRateUs}us")
+                            LogX.w("浼犳劅鍣ㄩ檷棰? ${old}us -> ${cfg.sensorMaxRateUs}us")
                         }
                     }
                 })
-            LogX.hookSuccess("SensorManager", "registerListener(3�?")
+            LogX.hookSuccess("SensorManager", "registerListener(3鍙?")
         } catch (e: Exception) {
-            LogX.e("Hook registerListener(3�? 异常", e)
+            LogX.e("Hook registerListener(3鍙? 寮傚父", e)
         }
 
         try {
@@ -60,12 +60,12 @@ object SensorOptHook {
                         if (period < HIGH_FREQ_THRESHOLD_US) {
                             val old = period
                             p.args[2] = cfg.sensorMaxRateUs
-                            LogX.w("传感器降�?带延�?: ${old}us -> ${cfg.sensorMaxRateUs}us")
+                            LogX.w("浼犳劅鍣ㄩ檷棰?甯﹀欢杩?: ${old}us -> ${cfg.sensorMaxRateUs}us")
                         }
                     }
                 })
-            LogX.hookSuccess("SensorManager", "registerListener(4�?")
-        } catch (e: Exception) { LogX.w("异常: ${e.message}") }
+            LogX.hookSuccess("SensorManager", "registerListener(4鍙?")
+        } catch (e: Exception) { LogX.w("寮傚父: ${e.message}") }
 
         try {
             XposedHelpers.findAndHookMethod(
@@ -80,11 +80,11 @@ object SensorOptHook {
                         if (period < HIGH_FREQ_THRESHOLD_US) {
                             val old = period
                             p.args[2] = cfg.sensorMaxRateUs
-                            LogX.w("传感器降�?带Handler): ${old}us -> ${cfg.sensorMaxRateUs}us")
+                            LogX.w("浼犳劅鍣ㄩ檷棰?甯andler): ${old}us -> ${cfg.sensorMaxRateUs}us")
                         }
                     }
                 })
-            LogX.hookSuccess("SensorManager", "registerListener(带Handler)")
-        } catch (e: Exception) { LogX.w("异常: ${e.message}") }
+            LogX.hookSuccess("SensorManager", "registerListener(甯andler)")
+        } catch (e: Exception) { LogX.w("寮傚父: ${e.message}") }
     }
 }

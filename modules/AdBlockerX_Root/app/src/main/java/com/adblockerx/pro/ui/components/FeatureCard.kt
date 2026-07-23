@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 /**
- * 可复用功能开关卡�?
+ * 鍙鐢ㄥ姛鑳藉紑鍏冲崱鐗?
  */
 @Composable
 fun FeatureCard(
@@ -57,7 +57,7 @@ fun FeatureCard(
                     }
                     if (experimental) {
                         Text(
-                            text = "  实验�?,
+                            text = "  瀹為獙鎬?,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary
                         )

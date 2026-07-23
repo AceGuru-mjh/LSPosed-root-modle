@@ -7,17 +7,17 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * v1.0.6 新增（对�?AdClose�?
+ * v1.0.6 新增（对??AdClose??
  *
- * - 截图录屏限制移除：Hook Window.setFlags / SurfaceView，移�?FLAG_SECURE
- * - 摇一摇广告跳转禁用：Hook SensorManager，拦截加速度计高频事�?
- * - VPN/代理检测绕过：Hook NetworkInfo/ConnectivityManager，返回非 VPN 状�?
+ * - 截图录屏限制移除：Hook Window.setFlags / SurfaceView，移??FLAG_SECURE
+ * - 摇一摇广告跳转禁用：Hook SensorManager，拦截加速度计高频事??
+ * - VPN/代理检测绕过：Hook NetworkInfo/ConnectivityManager，返回非 VPN 状??
  */
 object AdClosePlusHook {
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: AdBlockConfig) {
         if (!cfg.screenshotUnlockEnabled && !cfg.shakeAdBlockEnabled && !cfg.vpnDetectBypassEnabled) return
-        LogX.i("AdClosePlus 启动 | 截图=${cfg.screenshotUnlockEnabled} 摇一�?${cfg.shakeAdBlockEnabled} VPN绕过=${cfg.vpnDetectBypassEnabled}")
+        LogX.i("AdClosePlus 启动 | 截图=${cfg.screenshotUnlockEnabled} 摇一??${cfg.shakeAdBlockEnabled} VPN绕过=${cfg.vpnDetectBypassEnabled}")
 
         if (cfg.screenshotUnlockEnabled) hookScreenshotUnlock(lpparam)
         if (cfg.shakeAdBlockEnabled) hookShakeAdBlock(lpparam)
@@ -39,11 +39,11 @@ object AdClosePlusHook {
                         try {
                             val flags = p.args[0] as Int
                             val mask = p.args[1] as Int
-                            // 如果尝试设置 FLAG_SECURE，从 flags �?mask 中移�?
+                            // 如果尝试设置 FLAG_SECURE，从 flags ??mask 中移??
                             if (flags and FLAG_SECURE != 0 || mask and FLAG_SECURE != 0) {
                                 p.args[0] = flags and FLAG_SECURE.inv()
                                 p.args[1] = mask and FLAG_SECURE.inv()
-                                LogX.d("[截图] 已移�?FLAG_SECURE")
+                                LogX.d("[截图] 已移??FLAG_SECURE")
                             }
                         } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
                     }
@@ -58,7 +58,7 @@ object AdClosePlusHook {
                             val flags = p.args[0] as Int
                             if (flags and FLAG_SECURE != 0) {
                                 p.args[0] = flags and FLAG_SECURE.inv()
-                                LogX.d("[截图] 已移�?addFlags FLAG_SECURE")
+                                LogX.d("[截图] 已移??addFlags FLAG_SECURE")
                             }
                         } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
                     }
@@ -73,7 +73,7 @@ object AdClosePlusHook {
                         object : XC_MethodHook() {
                             override fun beforeHookedMethod(p: MethodHookParam) {
                                 p.args[0] = false
-                                LogX.d("[截图] 已拦�?SurfaceView.setSecure")
+                                LogX.d("[截图] 已拦??SurfaceView.setSecure")
                             }
                         })
                     LogX.hookSuccess("SurfaceView", "setSecure")
@@ -86,7 +86,7 @@ object AdClosePlusHook {
     private fun hookShakeAdBlock(lpparam: XC_LoadPackage.LoadPackageParam) {
         try {
             val smCls = XposedHelpers.findClassIfExists("android.hardware.SensorManager", lpparam.classLoader) ?: return
-            // Hook registerListener，对加速度�? TYPE_ACCELEROMETER = 1 )返回 false（注册失败）
+            // Hook registerListener，对加速度?? TYPE_ACCELEROMETER = 1 )返回 false（注册失败）
             XposedHelpers.findAndHookMethod(smCls, "registerListener",
                 "android.hardware.SensorEventListener",
                 "android.hardware.Sensor", Int::class.javaPrimitiveType,
@@ -98,7 +98,7 @@ object AdClosePlusHook {
                             // TYPE_ACCELEROMETER=1, TYPE_LINEAR_ACCELERATION=10
                             if (type == 1 || type == 10) {
                                 p.result = false
-                                LogX.d("[摇一摇] 已拦截加速度计注�?)
+                                LogX.d("[摇一摇] 已拦截加速度计注??)
                             }
                         } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
                     }
@@ -107,10 +107,10 @@ object AdClosePlusHook {
         } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
     }
 
-    /** VPN/代理检测绕过：Hook NetworkInfo/ConnectivityManager 返回�?VPN */
+    /** VPN/代理检测绕过：Hook NetworkInfo/ConnectivityManager 返回??VPN */
     private fun hookVpnDetectBypass(lpparam: XC_LoadPackage.LoadPackageParam) {
         try {
-            // Hook NetworkInfo.getType() 返回�?TYPE_VPN(17)
+            // Hook NetworkInfo.getType() 返回??TYPE_VPN(17)
             val niCls = XposedHelpers.findClassIfExists("android.net.NetworkInfo", lpparam.classLoader)
             if (niCls != null) {
                 XposedHelpers.findAndHookMethod(niCls, "getType",
@@ -144,7 +144,7 @@ object AdClosePlusHook {
                             try {
                                 if (p.args[0] == 17) {  // 查询 TYPE_VPN
                                     p.args[0] = 1  // 改查 TYPE_WIFI
-                                    LogX.d("[VPN] 已拦�?VPN 网络查询")
+                                    LogX.d("[VPN] 已拦??VPN 网络查询")
                                 }
                             } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
                         }
@@ -152,7 +152,7 @@ object AdClosePlusHook {
                 LogX.hookSuccess("ConnectivityManager", "getNetworkInfo")
             }
 
-            // Hook SystemProperties.get("net.dns1") �?VPN 特征
+            // Hook SystemProperties.get("net.dns1") ??VPN 特征
             try {
                 val spCls = XposedHelpers.findClassIfExists("android.os.SystemProperties", lpparam.classLoader)
                 if (spCls != null) {

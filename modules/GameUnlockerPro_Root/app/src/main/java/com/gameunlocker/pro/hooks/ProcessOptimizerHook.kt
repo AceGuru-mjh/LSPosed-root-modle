@@ -8,21 +8,21 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * 进程性能优化 Hook（Root 版，应用�?+ Shizuku 冻结后台�?
+ * 进程性能优化 Hook（Root 版，应用??+ Shizuku 冻结后台??
  *
  * 应用层：
- *  1. 提升游戏渲染线程优先�?
- *  2. Hook PowerManager 热状态回�?-> 返回 STATUS_NONE
+ *  1. 提升游戏渲染线程优先??
+ *  2. Hook PowerManager 热状态回??-> 返回 STATUS_NONE
  *
  * 系统级（需 Shizuku）：
- *  - 通过 am force-stop 冻结黑名单后台进�?
+ *  - 通过 am force-stop 冻结黑名单后台进??
  *  - 通过 echo 3 > /proc/sys/vm/drop_caches 清理页面缓存
  */
 object ProcessOptimizerHook {
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: GameConfig) {
         if (!cfg.processOptimizeEnabled) return
-        LogX.i("进程性能优化启动（应用层 + Shizuku 冻结后台�?)
+        LogX.i("进程性能优化启动（应用层 + Shizuku 冻结后台??)
 
         boostRenderThread(lpparam)
         hookPowerThermalStatus(lpparam)
@@ -50,10 +50,10 @@ object ProcessOptimizerHook {
                 val pt = Class.forName("android.os.Process")
                 val setThreadPriority = pt.getMethod("setThreadPriority", Int::class.javaPrimitiveType)
                 setThreadPriority.invoke(null, -8)
-                LogX.d("主线程优先级提升�?URGENT_DISPLAY(-8)")
+                LogX.d("主线程优先级提升??URGENT_DISPLAY(-8)")
             } catch (e: Throwable) { LogX.w("异常: ${e.message}") }
         } catch (e: Throwable) {
-            LogX.e("渲染线程优先级提升异�?, e)
+            LogX.e("渲染线程优先级提升异??, e)
         }
     }
 
@@ -75,7 +75,7 @@ object ProcessOptimizerHook {
         }
     }
 
-    /** 通过 Shizuku 冻结非必要后台进�?*/
+    /** 通过 Shizuku 冻结非必要后台进??*/
     private fun freezeBackgroundApps() {
         if (!ShizukuHelper.isShizukuAvailable()) {
             LogX.w("Shizuku 不可用，跳过后台冻结")
@@ -95,6 +95,6 @@ object ProcessOptimizerHook {
             ShizukuHelper.execShell("am force-stop $app")
         }
         ShizukuHelper.execShell("echo 3 > /proc/sys/vm/drop_caches")
-        LogX.i("Shizuku 后台冻结完成: ${apps.size} 个进�?)
+        LogX.i("Shizuku 后台冻结完成: ${apps.size} 个进??)
     }
 }

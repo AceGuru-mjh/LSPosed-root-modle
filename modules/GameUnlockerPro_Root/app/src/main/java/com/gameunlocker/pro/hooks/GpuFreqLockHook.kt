@@ -8,20 +8,20 @@ import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 /**
- * GPU 频率锁定 Hook（Root 专属�?
+ * GPU 频率锁定 Hook（Root 专属??
  *
  * 通过 Shizuku 锁定 GPU 最大频率：
- *  - 读取 GPU 最大频�?
+ *  - 读取 GPU 最大频??
  *  - 写入 max_freq 锁定
- *  - 设置 devfreq governor �?performance
+ *  - 设置 devfreq governor ??performance
  *
- * 适配高�?Adreno (kgsl) / MTK / Mali GPU
+ * 适配高??Adreno (kgsl) / MTK / Mali GPU
  */
 object GpuFreqLockHook {
 
     fun apply(lpparam: XC_LoadPackage.LoadPackageParam, cfg: GameConfig) {
         if (!cfg.gpuFreqLockEnabled) return
-        LogX.i("GPU频率锁定 Hook 启动（Root 专属�?)
+        LogX.i("GPU频率锁定 Hook 启动（Root 专属??)
 
         XposedHelpers.findAndHookMethod("android.app.Application", lpparam.classLoader, "onCreate",
             object : XC_MethodHook() {
@@ -42,18 +42,18 @@ object GpuFreqLockHook {
         LogX.hookSuccess("Application", "onCreate->GpuFreqLock")
     }
 
-    /** 锁定 GPU 最大频�?*/
+    /** 锁定 GPU 最大频??*/
     private fun lockGpuMaxFreq() {
-        // 高�?Adreno kgsl
+        // 高??Adreno kgsl
         val kgslBase = "/sys/class/kgsl/kgsl-3d0"
         val devfreqBase = "$kgslBase/devfreq"
-        // 读取可用最大频�?
+        // 读取可用最大频??
         val maxFreq = ShizukuHelper.readFile("$devfreqBase/max_freq")
             ?: ShizukuHelper.readFile("$kgslBase/max_clock_mhz")
         if (maxFreq != null) {
             // 写入 max_freq 锁定
             ShizukuHelper.execShellSilent("echo $maxFreq > $devfreqBase/max_freq")
-            LogX.d("GPU最大频率锁�? $maxFreq")
+            LogX.d("GPU最大频率锁?? $maxFreq")
         }
         // MTK GPU
         val mtkPaths = listOf(
@@ -69,7 +69,7 @@ object GpuFreqLockHook {
         }
     }
 
-    /** 设置 GPU governor �?performance */
+    /** 设置 GPU governor ??performance */
     private fun setGpuPerformanceGovernor() {
         val governorPaths = listOf(
             "/sys/class/kgsl/kgsl-3d0/devfreq/governor",
@@ -77,7 +77,7 @@ object GpuFreqLockHook {
         )
         for (path in governorPaths) {
             if (ShizukuHelper.execShellSilent("echo performance > $path")) {
-                LogX.d("GPU governor �?performance: $path")
+                LogX.d("GPU governor ??performance: $path")
                 return
             }
         }

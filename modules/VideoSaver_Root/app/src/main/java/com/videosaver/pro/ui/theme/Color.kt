@@ -2,7 +2,7 @@ package com.videosaver.pro.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// VideoSaver Pro 粉色系主�?
+// VideoSaver Pro 绮夎壊绯讳富棰?
 val PinkLight = Color(0xFFD81B60)
 val PinkPrimary = Color(0xFFD81B60)
 val PinkContainer = Color(0xFFFFD9E2)

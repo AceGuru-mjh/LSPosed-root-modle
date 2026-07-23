@@ -4,7 +4,7 @@ import android.util.Log
 
 /**
  * 统一日志工具
- *  - i/d/w/e: 普通日志（同时输出 Logcat + Xposed 日志�?
+ *  - i/d/w/e: 普通日志（同时输出 Logcat + Xposed 日志??
  *  - hookSuccess/hookFailed: Hook 调试日志
  */
 object LogX {

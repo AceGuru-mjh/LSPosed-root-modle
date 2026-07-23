@@ -41,7 +41,7 @@ fun FeaturesScreen(cfg: AdBlockConfig, onConfigChange: (AdBlockConfig) -> Unit) 
 
         FeatureCard(
             "OkHttp 请求拦截",
-            "RealCall.execute/enqueue + Interceptor.Chain.proceed 多候选类名容�?,
+            "RealCall.execute/enqueue + Interceptor.Chain.proceed 多候选类名容??,
             cfg.okHttpAdEnabled,
             { val nc = cfg.copy(okHttpAdEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
@@ -49,15 +49,15 @@ fun FeaturesScreen(cfg: AdBlockConfig, onConfigChange: (AdBlockConfig) -> Unit) 
 
         FeatureCard(
             "URLConnection 拦截",
-            "URL.openConnection �?IOException / HttpURLConnection 返回 404 / Https 同理",
+            "URL.openConnection ??IOException / HttpURLConnection 返回 404 / Https 同理",
             cfg.urlConnectionAdEnabled,
             { val nc = cfg.copy(urlConnectionAdEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "内存 Hosts 黑名�?,
-            "内置广告域名黑名�?+ 用户自定义，子域�?包含匹配",
+            "内存 Hosts 黑名??,
+            "内置广告域名黑名??+ 用户自定义，子域??包含匹配",
             cfg.hostsFilterEnabled,
             { val nc = cfg.copy(hostsFilterEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
@@ -65,18 +65,18 @@ fun FeaturesScreen(cfg: AdBlockConfig, onConfigChange: (AdBlockConfig) -> Unit) 
 
         FeatureCard(
             "广告 SDK View 隐藏",
-            "Hook 21 个广�?SDK �?View 类，构造后强制 GONE + 拦截 VISIBLE",
+            "Hook 21 个广??SDK ??View 类，构造后强制 GONE + 拦截 VISIBLE",
             cfg.adViewHideEnabled,
             { val nc = cfg.copy(adViewHideEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("应用层实验性拦�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+        Text("应用层实验性拦??, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
             "追踪 SDK 拦截",
-            "Hook Umeng/TalkingData/Flurry/Bugly/BaiduMtj 等上报方法直�?return",
+            "Hook Umeng/TalkingData/Flurry/Bugly/BaiduMtj 等上报方法直??return",
             cfg.trackerBlockEnabled,
             { val nc = cfg.copy(trackerBlockEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true
@@ -85,7 +85,7 @@ fun FeaturesScreen(cfg: AdBlockConfig, onConfigChange: (AdBlockConfig) -> Unit) 
 
         FeatureCard(
             "Cookie 清理",
-            "Hook CookieManager.getCookie 返回前过�?_ga/_gid/IDE 等追�?Cookie",
+            "Hook CookieManager.getCookie 返回前过??_ga/_gid/IDE 等追??Cookie",
             cfg.cookieCleanEnabled,
             { val nc = cfg.copy(cookieCleanEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true
@@ -93,8 +93,8 @@ fun FeaturesScreen(cfg: AdBlockConfig, onConfigChange: (AdBlockConfig) -> Unit) 
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "重定向拦�?,
-            "Hook WebViewClient.shouldOverrideUrlLoading 拦截广告跳转深链 / click 关键�?,
+            "重定向拦??,
+            "Hook WebViewClient.shouldOverrideUrlLoading 拦截广告跳转深链 / click 关键??,
             cfg.redirectBlockEnabled,
             { val nc = cfg.copy(redirectBlockEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true
@@ -110,12 +110,12 @@ fun FeaturesScreen(cfg: AdBlockConfig, onConfigChange: (AdBlockConfig) -> Unit) 
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("Root 系统级拦截（需 Shizuku�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        Text("Root 系统级拦截（需 Shizuku??, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
             "系统 Hosts 修改",
-            "Shizuku �?/data/adb/modules/adblockerx/system/etc/hosts（Magisk overlay�? mount --bind",
+            "Shizuku ??/data/adb/modules/adblockerx/system/etc/hosts（Magisk overlay?? mount --bind",
             cfg.systemHostsEnabled,
             { val nc = cfg.copy(systemHostsEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             rootLevel = true
@@ -135,7 +135,7 @@ fun FeaturesScreen(cfg: AdBlockConfig, onConfigChange: (AdBlockConfig) -> Unit) 
             OutlinedTextField(
                 value = cfg.privateDnsHost,
                 onValueChange = { val nc = cfg.copy(privateDnsHost = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
-                label = { Text("Private DNS 主机�?) },
+                label = { Text("Private DNS 主机??) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -144,7 +144,7 @@ fun FeaturesScreen(cfg: AdBlockConfig, onConfigChange: (AdBlockConfig) -> Unit) 
 
         FeatureCard(
             "DNS 解析 Hook",
-            "Hook InetAddress/Network/Libcore.os 对广告域名返�?127.0.0.1",
+            "Hook InetAddress/Network/Libcore.os 对广告域名返??127.0.0.1",
             cfg.dnsResolverHookEnabled,
             { val nc = cfg.copy(dnsResolverHookEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             rootLevel = true
@@ -160,11 +160,11 @@ fun FeaturesScreen(cfg: AdBlockConfig, onConfigChange: (AdBlockConfig) -> Unit) 
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("Root 实验性拦�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        Text("Root 实验性拦??, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
-            "iptables 网络层拦�?,
+            "iptables 网络层拦??,
             "Shizuku iptables -A OUTPUT -d <ad_ip> -j DROP（前 50 个域名）",
             cfg.iptablesBlockEnabled,
             { val nc = cfg.copy(iptablesBlockEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
@@ -181,12 +181,12 @@ fun FeaturesScreen(cfg: AdBlockConfig, onConfigChange: (AdBlockConfig) -> Unit) 
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("系统级增强（Task24 新增�?, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+        Text("系统级增强（Task24 新增??, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
         Spacer(Modifier.height(8.dp))
 
         FeatureCard(
             "系统 DNS 缓存刷新",
-            "ndc resolver flushdefaultif + settings put global private_dns_specifier，周期触�?,
+            "ndc resolver flushdefaultif + settings put global private_dns_specifier，周期触??,
             cfg.dnsCacheFlushEnabled,
             { val nc = cfg.copy(dnsCacheFlushEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             rootLevel = true
@@ -197,15 +197,15 @@ fun FeaturesScreen(cfg: AdBlockConfig, onConfigChange: (AdBlockConfig) -> Unit) 
         Spacer(Modifier.height(8.dp))
         FeatureCard(
             "WebView 注入 JS",
-            "onPageFinished 后注�?CSS 隐藏广告 DOM（可能影响页面正常显示）",
+            "onPageFinished 后注??CSS 隐藏广告 DOM（可能影响页面正常显示）",
             cfg.injectJsEnabled,
             { val nc = cfg.copy(injectJsEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) },
             experimental = true
         )
         Spacer(Modifier.height(8.dp))
         FeatureCard(
-            "内置广告黑名�?,
-            "启用内置 90 条广告域名（关闭后仅匹配自定义黑名单�?,
+            "内置广告黑名??,
+            "启用内置 90 条广告域名（关闭后仅匹配自定义黑名单??,
             cfg.builtinBlocklistEnabled,
             { val nc = cfg.copy(builtinBlocklistEnabled = it); ConfigManager.saveGlobalConfig(nc); onConfigChange(nc) }
         )
